@@ -1,0 +1,38 @@
+database:
+  driver: sqlite3
+  dbpath: C:/Users/username/price_history.db
+
+schemas:
+  market_data: core4
+  portfolio_data: none
+
+security_types:
+  - STK
+  - ETF
+  - CASH
+  - FUT
+  - OPT
+  - IND
+  - FOP
+  - BOND
+  - CMDTY
+  - FUND
+  - BAG
+  - WAR
+  - NEWS
+
+seed_data:
+  - SecTypes
+  - Exchanges
+  - FuturesContracts
+  - FXPairs
+  - Stocks
+  - Options
+  - Indeces
+  - ETFs
+  - Commodities
+  - MutualFunds
+  - Bonds
+  - Warrents
+  - NewsProviders
+
