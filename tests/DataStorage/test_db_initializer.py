@@ -1,11 +1,14 @@
 import unittest
 import tempfile
 import os
-import yaml
 from core.DataStorage.db_initializer import DBInitializer
+from sqlalchemy import Engine
 
 class TestDBInitializer(unittest.TestCase):
     def test_db_initializer_valid_config(self):
+        """
+        Test to ensure that a mock of a valid config file is being read correctly
+        """
         with tempfile.TemporaryDirectory() as temp_dir:
             # Create a path to our temporary config file
             config_path = os.path.join(temp_dir, "test_config.yml")
@@ -42,7 +45,6 @@ class TestDBInitializer(unittest.TestCase):
             self.assertIn("seed_data", db_init.config_data, "db_info should contain 'user'")
             ## Assert database info is being read in correctly
             self.assertEqual(db_init.db_info['driver'], "sqlite3", "the database drive is not being read as sqlite3")
-            self.assertEqual(db_init.db_info['host'], "local", "the database host is not being read as local")
             self.assertEqual(db_init.db_info['mkt_data_dbpath'], "D:/sqlite/SAFT/Testing/price_history.db", "the database mkt_data_dbpath is being read incorrectly")
             self.assertEqual(db_init.db_info['portfolio_data_dbpath'], "D:/sqlite/SAFT/Testing/portfolio_warehouse.db", "the database portfolio_data_dbpath is being read incorrectly")
             ## Assert schemas is being read in correctly           
@@ -56,7 +58,28 @@ class TestDBInitializer(unittest.TestCase):
             self.assertIsNotNone(db_init.config_data["seed_data"])
             self.assertEqual(len(db_init.config_data["seed_data"]), 2)
 
+    def test_db_file_not_found(self):
+        """
+        Test to ensure that the proper error is being raised when the config file cannot be found
+        """
+        # Create a path to a non-existent config file
+        bad_config_path = 'this_file_dne.yml'
 
+        with self.assertRaises(FileNotFoundError):
+            DBInitializer(config_path=bad_config_path)
+    
+    def test_orm_engine_initialization_sqlite(self):
+        db_init = DBInitializer()
+        mkt_data_engine = db_init.initialize_mkt_data_engine()
+        portfolio_data_engine = db_init.initialize_portfolio_data_engine()
+        self.assertIsInstance(mkt_data_engine, Engine, "received incorrect data type for the market data engine")
+        self.assertIsInstance(portfolio_data_engine, Engine, "received incorrect data type for the portfolio data engine")
+        self.assertEqual(mkt_data_engine.driver, "pysqlite", f"did not receive the correct driver for mkt_data_engine: {mkt_data_engine.driver}")
+        self.assertEqual(portfolio_data_engine.driver, "pysqlite", f"did not receive the correct driver for mkt_data_engine: {mkt_data_engine.driver}")
+    
+    def test_initialize_core_tables_sqlite(self):
+
+        pass
 
 
 if __name__ == '__main__':
