@@ -1,10 +1,13 @@
-database:
-  driver: sqlite3
-  dbpath: C:/Users/username/price_history.db
 
 schemas:
-  market_data: core4
-  portfolio_data: none
+  market_data: true
+  convert_price_to_int: true
+  portfolio_data: false
+
+database:
+  driver: sqlite3
+  mkt_datat_dbpath: C:/Users/username/price_history.db
+  portfolio_data_dbpath: C:/Users/username/portfolio_warehouse.db
 
 security_types:
   - STK
