@@ -6,6 +6,7 @@ from unittest.mock import patch, mock_open, MagicMock, ANY
 
 from core.DataStorage.Utils.table_creation import DBTableCreation
 from core.DataStorage.Utils.helpers import DataStorageHelpers as dsh
+from core.DataStorage.Utils.config_parser import DBConfigParser
 
 class TestDBTableCreation(unittest.TestCase):
     def setUp(self):
@@ -13,12 +14,13 @@ class TestDBTableCreation(unittest.TestCase):
         self.dbtable = DBTableCreation.__new__(DBTableCreation)
         
         # Manually set all attributes created during initialization
-        self.dbtable.security_types = ['STK', 'ETF', 'FUT', 'CASH'] 
-        self.dbtable.quotes_flag = True
-        self.dbtable.ohlcv_flag = True
-        self.dbtable.market_data_flag = True
-        self.dbtable.db_driver = 'sqlite'
-        self.dbtable.mkt_data_db_path = ':memory:'
+        self.dbtable.config_info = DBConfigParser()
+        self.dbtable.config_info.security_types = ['STK', 'ETF', 'FUT', 'CASH'] 
+        self.dbtable.config_info.quotes_flag = True
+        self.dbtable.config_info.ohlcv_flag = True
+        self.dbtable.config_info.market_data_flag = True
+        self.dbtable.config_info.db_dialect = 'sqlite'
+        self.dbtable.config_info.mkt_data_db_path = ':memory:'
         self.dbtable.sql_base_path = 'core/DataStorage/TableCreationSQL'
         self.dbtable.logger = dsh.setup_log_to_console()
         self.dbtable.equities_flag = True
@@ -39,8 +41,8 @@ class TestDBTableCreation(unittest.TestCase):
         """
         Test that create_core_list returns the expected list of file paths when only ohlcv_flag is True.
         """
-        self.dbtable.quotes_flag = False
-        self.dbtable.ohlcv_flag = True
+        self.dbtable.config_info.quotes_flag = False
+        self.dbtable.config_info.ohlcv_flag = True
         core_list = self.dbtable.create_core_list()
         expected_quotes = os.path.join(self.dbtable.sql_base_path, 'core_market_data_quotes.sql')
         expected_ohlcv = os.path.join(self.dbtable.sql_base_path, 'core_market_data_ohlcv.sql')
@@ -48,15 +50,15 @@ class TestDBTableCreation(unittest.TestCase):
         self.assertIn(expected_ohlcv, core_list)
         self.assertEqual(len(core_list), 1)
         # Reset to both true
-        self.dbtable.quotes_flag = True
-        self.dbtable.ohlcv_flag = True
+        self.dbtable.config_info.quotes_flag = True
+        self.dbtable.config_info.ohlcv_flag = True
 
     def test_create_core_list_only_quotes(self):
         """
         Test that create_core_list returns the expected list of file paths when only quotes_flag is True.
         """
-        self.dbtable.quotes_flag = True
-        self.dbtable.ohlcv_flag = False
+        self.dbtable.config_info.quotes_flag = True
+        self.dbtable.config_info.ohlcv_flag = False
         core_list = self.dbtable.create_core_list()
         expected_quotes = os.path.join(self.dbtable.sql_base_path, 'core_market_data_quotes.sql')
         expected_ohlcv = os.path.join(self.dbtable.sql_base_path, 'core_market_data_ohlcv.sql')
@@ -64,8 +66,8 @@ class TestDBTableCreation(unittest.TestCase):
         self.assertNotIn(expected_ohlcv, core_list)
         self.assertEqual(len(core_list), 1)
         # Reset to both true
-        self.dbtable.quotes_flag = True
-        self.dbtable.ohlcv_flag = True
+        self.dbtable.config_info.quotes_flag = True
+        self.dbtable.config_info.ohlcv_flag = True
     
     def test_create_metadata_path(self):
         """
@@ -101,7 +103,7 @@ class TestDBTableCreation(unittest.TestCase):
         """
         engine = self.dbtable.initalize_mkt_data_engine()
         self.assertIsInstance(engine, Engine)
-        # With mkt_data_db_path = ':memory:' and db_driver = 'sqlite', the engine URL should start with "sqlite:///".
+        # With mkt_data_db_path = ':memory:' and db_dialect = 'sqlite', the engine URL should start with "sqlite:///".
         self.assertTrue(engine.url.drivername.startswith('sqlite'))
 
     @patch("builtins.open", new_callable=mock_open, read_data="SELECT 1;")

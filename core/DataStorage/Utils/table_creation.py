@@ -4,16 +4,18 @@ from core.DataStorage.Utils.helpers import DataStorageHelpers as dsh
 from core.DataStorage.Utils.config_parser import DBConfigParser
 
 
-class DBTableCreation(DBConfigParser):
+class DBTableCreation():
 
     def __init__(self):
-        super.__init__()
+        self.logger = dsh.setup_log_to_console()
+        # Get config info
+        self.config_info = DBConfigParser()
         # Base path for SQL scripts
         self.sql_base_path = 'core/DataStorage/TableCreationSQL'
         # Set flags for tables shared between multiple security types
-        if ('STK' in self.security_types | 'ETF' in self.security_types | 'FUND' in self.security_types):
+        if ('STK' in self.config_info.security_types or 'ETF' in self.config_info.security_types or 'FUND' in self.config_info.security_types):
             self.equities_flag = True
-        if ('STK' in self.security_types | 'FUT' in self.security_types):
+        if ('STK' in self.config_info.security_types or 'FUT' in self.config_info.security_types):
             self.underlying_flag = True
     
     def create_core_list(self) -> list[str]:
@@ -24,10 +26,10 @@ class DBTableCreation(DBConfigParser):
         - core_list (list): a list of the file paths to the core tables to include in the database
         """
         core_list = []
-        if self.quotes_flag:
+        if self.config_info.quotes_flag:
             quotes_core = os.path.join(self.sql_base_path, 'core_market_data_quotes.sql')
             core_list.append(quotes_core)
-        if self.ohlcv_flag:
+        if self.config_info.ohlcv_flag:
             quotes_core = os.path.join(self.sql_base_path, 'core_market_data_ohlcv.sql')
             core_list.append(quotes_core)
         return core_list
@@ -53,7 +55,7 @@ class DBTableCreation(DBConfigParser):
         - metadata_list (list): a list of the file paths to the metadata tables to include in the database
         """
         metadata_list = []
-        for sec_type in self.security_types:
+        for sec_type in self.config_info.security_types:
             script_prefix = sec_type.lower()
             metadata_path = self.create_metadata_path(self.sql_base_path, script_prefix=script_prefix)
             metadata_list.append(metadata_path)
@@ -66,10 +68,10 @@ class DBTableCreation(DBConfigParser):
         return metadata_list
     
     def initalize_mkt_data_engine(self) -> Engine:
-        if self.market_data_flag:
+        if self.config_info.market_data_flag:
             try:
-                if self.db_driver in ("sqlite3", "sqlite") and not self.mkt_data_db_path.startswith('sqlite:///'):
-                    engine_path = 'sqlite:///' + self.mkt_data_db_path
+                if self.config_info.db_dialect in ("sqlite3", "sqlite") and not self.config_info.mkt_data_db_path.startswith('sqlite:///'):
+                    engine_path = 'sqlite:///' + self.config_info.mkt_data_db_path
                 mkt_data_engine = create_engine(engine_path)
                 return mkt_data_engine
             except Exception as e:

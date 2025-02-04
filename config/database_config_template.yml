@@ -1,41 +1,42 @@
-
-schemas:
-  market_data: true
-  convert_price_to_int: true
-  portfolio_data: false
-
 database:
   driver: sqlite3
   mkt_datat_dbpath: C:/Users/username/price_history.db
   portfolio_data_dbpath: C:/Users/username/portfolio_warehouse.db
+
+schemas:
+  market_data: true
+  convert_price_to_int: false
+  portfolio_data: false
+  ohlcv: true
+  quotes: false
 
 security_types:
   - STK
   - ETF
   - CASH
   - FUT
-  - OPT
-  - IND
-  - FOP
-  - BOND
-  - CMDTY
-  - FUND
-  - BAG
-  - WAR
-  - NEWS
+  - OPT # Not currently supported
+  - IND # Not currently supported
+  - FOP # Not currently supported
+  - BOND # Not currently supported
+  - CMDTY # Not currently supported
+  - FUND # Not currently supported
+  - BAG # Not currently supported
+  - WAR # Not currently supported
+  - NEWS # Not currently supported
 
 seed_data:
   - SecTypes
   - Exchanges
-  - FuturesContracts
-  - FXPairs
-  - Stocks
-  - Options
-  - Indeces
-  - ETFs
-  - Commodities
-  - MutualFunds
-  - Bonds
-  - Warrents
-  - NewsProviders
+  - STK
+  - ETF
+  - CASH
+  - FUT
+  - IND # Not currently supported
+  - BOND # Not currently supported
+  - CMDTY # Not currently supported
+  - FUND # Not currently supported
+  - BAG # Not currently supported
+  - WAR # Not currently supported
+  - NEWS # Not currently supported
 

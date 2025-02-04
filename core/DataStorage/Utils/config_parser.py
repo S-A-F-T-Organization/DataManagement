@@ -1,5 +1,7 @@
 import yaml
 from core.DataStorage.Utils.helpers import DataStorageHelpers as dsh
+import warnings
+from typing import Any, Dict, List
 
 class DBConfigParser:
 
@@ -8,15 +10,37 @@ class DBConfigParser:
 
     Parameters:
     - config_path(optional[str]): The path to the users config file. If setup correctly it should not be needed so it is optional. If the user runs into problems they can specify the path to their config file.
+
+    Attributes:
+    - logger (Logger):
+    - market_data_flag (bool):
+    - market_data_flag (bool):
+    - portfolio_data_flag (bool): 
+    - to_int_flag (bool):
+    - ohlcv_flag (bool):
+    - quotes_flag (bool):  
+    - db_dialect (str):
+    - mkt_data_db_path (str):
+    - portfolio_data_db_path (str):
+    - security_types (list[str]):
+    - seed_data (list[str]):
+
+    Methods:
+    - parsing:
+        - parse_schema_info:
+        - parse_db_info:
+        - parse_list_info:
+    - Checks
     """
 
     def __init__(self, config_path:str='config/my_config.yml'):
         self.logger = dsh.setup_log_to_console()
         # Read in the config file information
         try:
-            # Read in YAML configuration file
+            # Read in YAML config file
             with open(f'{config_path}', 'r') as f:
                 self.config_data:dict = yaml.safe_load(f)
+            self.get_config_info()
         except FileNotFoundError as fe:
             self.logger.error(f"Could not find configuration file: {config_path}", exc_info=True)
             raise
@@ -47,7 +71,7 @@ class DBConfigParser:
         - db_info (dict): A dictionary containing the database info from the database section of the config file
         """
         db_info:dict[str, str] = self.config_data['database']
-        self.db_driver = db_info['driver']
+        self.db_dialect = db_info['dialect']
         self.mkt_data_db_path = db_info['mkt_data_db_path']
         self.portfolio_data_db_path = db_info['portfolio_data_db_path']
         return db_info
@@ -83,11 +107,19 @@ class DBConfigParser:
         self.seed_data = clean_seed_data
 
     def schema_checks(self):
-        if self.quotes_flag: raise UserWarning("Quote level data is not currently supported, we are hoping to have support for this soon! Setup for this data granularity will be ignored")
-        if self.to_int_flag: raise UserWarning(f"{self.to_int_flag} is set to `True`, historical security prices will be stored as integers for precision and storage efficiency")
+        if self.quotes_flag: warnings.warn(
+                "Quote level data is not currently supported, we are hoping to have support for this soon! Setup for this data granularity will be ignored",
+                UserWarning,
+                stacklevel=2
+            )
+        if self.to_int_flag: warnings.warn(
+                f"{self.to_int_flag} is set to `True`, historical security prices will be stored as integers for precision and storage efficiency",
+                UserWarning,
+                stacklevel=2
+            )
 
     def db_info_checks(self):
-        if self.db_driver['driver'] not in ["sqlite", 'sqlite3']: raise ValueError("We currently only offer support for SQLite, with support for PostgreSQL coming soon! If you believe you configured the setup for SQLite but are receiving this error, try either 'sqlite' or 'sqlite3'")
+        if self.db_dialect not in ["sqlite", 'sqlite3']: raise ValueError("We currently only offer support for SQLite, with support for PostgreSQL coming soon! If you believe you configured the setup for SQLite but are receiving this error, try either 'sqlite' or 'sqlite3'")
     
     def sec_type_checks(self):
         supported_sec_types = ["STK", "ETF", "CASH", "FUT"]
@@ -100,3 +132,23 @@ class DBConfigParser:
     
     def seed_data_checks(self):
         pass
+    
+    def checks(self):
+        self.sec_type_checks()
+        self.schema_checks()
+        self.db_info_checks()
+        self.seed_data_checks()
+    
+    def parse_all(self):
+        self.parse_db_info()
+        self.parse_list_info()
+        self.parse_schema_info()
+    
+    def norm_all(self):
+        self.normalize_sec_types()
+        self.normalize_seed_data()
+    
+    def get_config_info(self):
+        self.parse_all()
+        self.norm_all()
+        self.schema_checks()

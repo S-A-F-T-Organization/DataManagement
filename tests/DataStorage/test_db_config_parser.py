@@ -10,23 +10,22 @@ class TestDBConfigParser(unittest.TestCase):
     def setUp(self):
         # A valid YAML configuration that covers all required keys.
         self.valid_yaml = """
-        schemas:
-        market_data: true
-        convert_price_to_int: false
-        ohlcv: true
-        quotes: false
-        database:
-        driver:
-            driver: sqlite
-        mkt_data_db_path: "mkt_data.db"
-        portfolio_data_db_path: "portfolio_data.db"
-        security_types:
-        - " stk "
-        - " etf"
-        seed_data:
-        - " seed1 "
-        - "seed2"
-        """.strip()
+schemas:
+  market_data: true
+  convert_price_to_int: false
+  ohlcv: true
+  quotes: false
+database:
+  dialect: sqlite
+  mkt_data_db_path: "mkt_data.db"
+  portfolio_data_db_path: "portfolio_data.db"
+security_types:
+  - " stk "
+  - " etf"
+seed_data:
+  - " seed1 "
+  - "seed2"
+""".strip()
 
         # Patch the built-in open so that when DBConfigParser reads a file it gets our YAML.
         self.patcher = patch("builtins.open", mock_open(read_data=self.valid_yaml))
@@ -53,7 +52,7 @@ class TestDBConfigParser(unittest.TestCase):
         # Test that parse_db_info sets the expected database attributes.
         db_info = self.config_parser.parse_db_info()
         self.assertEqual(db_info, expected_config['database'])
-        self.assertEqual(self.config_parser.db_driver, expected_config['database']['driver'])
+        self.assertEqual(self.config_parser.db_dialect, expected_config['database']['dialect'])
         self.assertEqual(self.config_parser.mkt_data_db_path, expected_config['database']['mkt_data_db_path'])
         self.assertEqual(self.config_parser.portfolio_data_db_path, expected_config['database']['portfolio_data_db_path'])
 
@@ -83,7 +82,7 @@ class TestDBConfigParser(unittest.TestCase):
         db_info = self.config_parser.parse_db_info()
         expected_db_info = yaml.safe_load(self.valid_yaml)['database']
         self.assertEqual(db_info, expected_db_info)
-        self.assertEqual(self.config_parser.db_driver, expected_db_info['driver'])
+        self.assertEqual(self.config_parser.db_dialect, expected_db_info['dialect'])
         self.assertEqual(self.config_parser.mkt_data_db_path, expected_db_info['mkt_data_db_path'])
         self.assertEqual(self.config_parser.portfolio_data_db_path, expected_db_info['portfolio_data_db_path'])
 
@@ -117,8 +116,7 @@ schemas:
   ohlcv: true
   quotes: true
 database:
-  driver:
-    driver: sqlite
+  dialect: sqlite
   mkt_data_db_path: "mkt_data.db"
   portfolio_data_db_path: "portfolio_data.db"
 security_types:
@@ -127,11 +125,12 @@ seed_data:
   - "SEED1"
         """.strip()
         with patch("builtins.open", mock_open(read_data=yaml_quotes_true)):
-            parser_q = DBConfigParser("dummy.yml")
-            parser_q.parse_schema_info()
-            with self.assertRaises(UserWarning) as context:
-                parser_q.schema_checks()
-            self.assertIn("Quote level data is not currently supported", str(context.exception))
+          parser_q = DBConfigParser("dummy.yml")
+          parser_q.parse_schema_info()
+          with self.assertWarns(UserWarning) as context:
+              parser_q.schema_checks()
+          self.assertIn("Quote level data is not currently supported", str(context.warning))
+
 
         # Simulate a configuration where convert_price_to_int is True (with quotes False).
         yaml_to_int_true = """
@@ -141,8 +140,7 @@ schemas:
   ohlcv: true
   quotes: false
 database:
-  driver:
-    driver: sqlite
+  dialect: sqlite
   mkt_data_db_path: "mkt_data.db"
   portfolio_data_db_path: "portfolio_data.db"
 security_types:
@@ -151,11 +149,11 @@ seed_data:
   - "SEED1"
         """.strip()
         with patch("builtins.open", mock_open(read_data=yaml_to_int_true)):
-            parser_t = DBConfigParser("dummy.yml")
-            parser_t.parse_schema_info()
-            with self.assertRaises(UserWarning) as context:
-                parser_t.schema_checks()
-            self.assertIn("True is set to `True`", str(context.exception))
+          parser_q = DBConfigParser("dummy.yml")
+          parser_q.parse_schema_info()
+          with self.assertWarns(UserWarning) as context:
+              parser_q.schema_checks()
+          self.assertIn("True is set to `True`", str(context.warning))
 
     def test_db_checks(self):
         # First, with valid configuration, db_info_checks should not raise.
@@ -165,7 +163,7 @@ seed_data:
         except Exception as e:
             self.fail(f"db_info_checks raised an exception unexpectedly: {e}")
 
-        # Now simulate an invalid configuration (driver not supported).
+        # Now simulate an invalid configuration (dialect not supported).
         yaml_invalid_db = """
 schemas:
   market_data: true
@@ -173,8 +171,7 @@ schemas:
   ohlcv: true
   quotes: false
 database:
-  driver:
-    driver: postgres
+  dialect: postgres
   mkt_data_db_path: "mkt_data.db"
   portfolio_data_db_path: "portfolio_data.db"
 security_types:
@@ -206,8 +203,7 @@ schemas:
   ohlcv: true
   quotes: false
 database:
-  driver:
-    driver: sqlite
+  dialect: sqlite
   mkt_data_db_path: "mkt_data.db"
   portfolio_data_db_path: "portfolio_data.db"
 security_types:
@@ -231,8 +227,7 @@ schemas:
   ohlcv: true
   quotes: false
 database:
-  driver:
-    driver: sqlite
+  dialect: sqlite
   mkt_data_db_path: "mkt_data.db"
   portfolio_data_db_path: "portfolio_data.db"
 security_types:
