@@ -2,6 +2,7 @@ from sqlalchemy import create_engine, Engine, text
 import yaml
 import logging
 import os
+import json
 
 class DBInitializer:
     """
@@ -48,8 +49,7 @@ class DBInitializer:
 
     def config_checks(self):
         # Schema checks
-        if self.config_data['schemas']['quotes']: raise UserWarning("Quote level data is not currently supported, we are hoping to have support for this soon! Setup for this data granularity will be ignored")
-        if self.portfolio_data_flag: raise UserWarning("We our portfolio data warehouse is not currently stable, expect an update soon to use this function!")
+        if self.config_data['schemas']['time_granularity'] == "quotes": raise UserWarning("Quote level data is not currently supported, we are hoping to have support for this soon! Setup for this data granularity will be ignored")
         if self.to_int_flag: raise UserWarning(f"{self.to_int_flag} is set to `True`, historical security prices will be stored as integers for precision and storage efficiency")
         # Database checks
         if self.db_info['driver'] not in ["sqlite", 'sqlite3']: raise ValueError("We currently only offer support for SQLite, with support for PostgreSQL coming soon! If you believe you configured the setup for SQLite but are receiving this error, try either 'sqlite' or 'sqlite3'")
@@ -62,6 +62,7 @@ class DBInitializer:
             elif sec_type in sec_type_future:
                 raise ValueError(f"We currently do not offer support for the security type {sec_type}, the currently supported security types are: {supported_sec_types}")
         # Seed Data checks
+    
     def initialize_mkt_data_engine(self) -> Engine:
         if self.market_data_flag:
             try:
@@ -91,24 +92,69 @@ class DBInitializer:
     def create_file_list(self) -> list[str]:
         files_list = []
         table_base_path = 'core\DataStorage\TableCreationSQL'
-        if self.market_data_flag:
-            
-        return
-    def initalize_mkt_data_db(self, mkt_data_engine:Engine):
-        pass
-    def initialize_mkt_data_core_ohlcv(self, mkt_data_engine:Engine):
-        file_path = 'core\DataStorage\TableCreationSQL\core_market_data_ohlcv.sql'
+        # read in table mappings
+        with open('core/utils/sec_type_mapping.json') as f:
+            table_mappings:dict = json.loads(f)
+            for sec_type in self.security_types:
+                file_name = table_mappings.get(sec_type)
+                full_path = os.path.join(table_base_path, file_name)
+                files_list.append(full_path)
+        return files_list
+    
+    def initialize_mkt_data_core_tables(self, mkt_data_engine:Engine):
+        core_list = []
+        if self.config_data['schemas']['ohlcv']:
+            core_list.append('core_market_data_ohlcv.sql')
+        if self.config_data['schemas']['ohlcv']:
+            core_list.append('core_market_data_quotes.sql')
         with mkt_data_engine.connect() as conn:
             transact = conn.begin()
-            try:
-                with open(file_path, 'r') as f:
-                    script = f.read()
-                    conn.execute(text(script))
-                transact.commit()
+            for core_file in core_list:
+                try:
+                    with open(core_file, 'r') as f:
+                        script = f.read()
+                        conn.execute(text(script))
+                    transact.commit()
 
-            except Exception as e:
-                transact.rollback()
-                raise
+                except Exception as e:
+                    transact.rollback()
+                    raise
+    
+    def initialize_other_tables(self, mkt_data_engine:Engine):
+        tables = self.create_file_list()
+        with mkt_data_engine.connect() as conn:
+            transact = conn.begin()
+            for table in tables:
+                    try:
+                        with open(table, 'r') as f:
+                            script = f.read()
+                            conn.execute(text(script))
+                        transact.commit()
+                    except Exception as e:
+                        transact.rollback()
+                        raise
+            if ('STK' in tables | 'ETF' in tables | 'FUND' in tables): # General equities tables
+                try:
+                    with open('core/DataStorage/TableCreationSQL/equities_tables.sql', 'r') as f:
+                        script = f.read()
+                        conn.execute(text(script))
+                    transact.commit()
+                except Exception as e:
+                    transact.rollback()
+                    raise
+            
+            if ('FUT' in self.security_types | 'ETF' in self.security_types): # Security types with underlying asset types
+                try:
+                    with open('core/DataStorage/TableCreationSQL/underlying_assets.sql', 'r') as f:
+                        script = f.read()
+                        conn.execute(text(script))
+                    transact.commit()
+                except Exception as e:
+                    transact.rollback()
+                    raise
+    
+    def initalize_mkt_data_db(self, mkt_data_engine:Engine):
+        pass
     
     def db_init_main():
         pass
