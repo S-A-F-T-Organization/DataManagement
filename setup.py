@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="saftdatamgmt",
+    name="saft_data_mgmt",
     version="0.1.0",
     description="A package for managing financial data, specifically made for algorithmic traders",
     author="Travis Swiger",
