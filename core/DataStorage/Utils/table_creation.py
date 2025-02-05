@@ -100,6 +100,8 @@ class DataTableCreation:
                     transact.rollback()
                     self.logger.error(f'Error creating the core tables', exc_info=True)
                     raise
+        self.logger.info("Successfully initialized core tables...")
+            
     
     def create_mkt_data_metadata(self, mkt_data_engine:Engine) -> None:
         """
@@ -121,6 +123,8 @@ class DataTableCreation:
                     transact.rollback()
                     self.logger.error(f'Error creating the metadata tables for the historical prices', exc_info=True)
                     raise
+        self.logger.info("Successfully initialized metadata tables...")
+        
     
     def create_portfolio_analysis_tables(self, mkt_data_engine:Engine) -> None:
         """
@@ -141,6 +145,8 @@ class DataTableCreation:
                 transact.rollback()
                 self.logger.error(f'Error creating the portfolio analysis tables', exc_info=True)
                 raise
+        self.logger.info("Successfully initialized portfolio analysis tables...")
+        
 
     def create_tables(self) -> None:
         """
