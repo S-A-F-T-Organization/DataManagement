@@ -1,14 +1,13 @@
 database:
   driver: sqlite3
-  mkt_datat_dbpath: C:/Users/username/price_history.db
-  portfolio_data_dbpath: C:/Users/username/portfolio_warehouse.db
+  db_path: C:/Users/username/my_data.db
 
 schemas:
   market_data: true
   convert_price_to_int: false
   portfolio_data: false
   ohlcv: true
-  quotes: false
+  quotes: false # Not currently supported
 
 security_types:
   - STK

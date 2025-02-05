@@ -11,16 +11,6 @@ class DataTableCreation():
     Args:
     - feature_info (opt[dict]): An optional input parameter if the user wants to record the values of the features being input into their model
 
-    Methods:
-    - create_core_list
-    - create_metadata_list
-    - initialize_mkt_data_engine
-    - create_mkt_data_core
-    - create_mkt_data_metadata
-    - create_core_portfolio_analysis_tables
-    - create_input_features_table
-    - create_tables: the main function for creating the tables
-
     Attributes:
     """
     def __init__(self, feature_info:dict):
@@ -72,7 +62,7 @@ class DataTableCreation():
             metadata_list.append(metadata_path)
         return metadata_list
     
-    def initalize_mkt_data_engine(self) -> Engine:
+    def initalize_db_engine(self) -> Engine:
         """
         This creates an SQLAlchemy engine to manage the database transactions/connection
 
@@ -91,7 +81,7 @@ class DataTableCreation():
         else:
             return None
     
-    def create_mkt_data_core(self, mkt_data_engine:Engine) -> None:
+    def create_core_tables(self, mkt_data_engine:Engine) -> None:
         """
         Creates the core tables for any SAFT style database
 
@@ -109,6 +99,7 @@ class DataTableCreation():
                     transact.commit()
                 except Exception as e:
                     transact.rollback()
+                    self.logger.error(f'Error creating the core tables', exc_info=True)
                     raise
     
     def create_mkt_data_metadata(self, mkt_data_engine:Engine) -> None:
@@ -129,9 +120,10 @@ class DataTableCreation():
                     transact.commit()
                 except Exception as e:
                     transact.rollback()
+                    self.logger.error(f'Error creating the metadata tables for the historical prices', exc_info=True)
                     raise
     
-    def create_core_portfolio_analysis_tables(self, mkt_data_engine:Engine) -> None:
+    def create_portfolio_analysis_tables(self, mkt_data_engine:Engine) -> None:
         """
         Creates all necessary tables for the portfolio analysis schema
 
@@ -148,9 +140,10 @@ class DataTableCreation():
                 transact.commit()
             except Exception as e:
                 transact.rollback()
+                self.logger.error(f'Error creating the portfolio analysis tables', exc_info=True)
                 raise
 
-    def create_input_features_table(self, mkt_data_engine:Engine, features_used:dict):
+    def create_input_features_table(self, mkt_data_engine:Engine, features_used:dict) -> None:
         """
         Creates all necessary tables for the portfolio analysis schema
 
@@ -160,9 +153,13 @@ class DataTableCreation():
         ##TODO: Create and test this method
         pass
 
-    def create_tables(self):
+    def create_tables(self) -> None:
         """
         This is the main function for creating the tables desired
         """
-        ##TODO: Create and test this method
-        pass 
+        mkt_data_engine = self.initalize_db_engine()
+        self.create_core_tables(mkt_data_engine)
+        if self.config_info.market_data_flag:
+            self.create_mkt_data_metadata(mkt_data_engine)
+        if self.config_info.portfolio_data_flag:
+            self.create_portfolio_analysis_tables(mkt_data_engine)
