@@ -4,7 +4,7 @@ from core.DataStorage.Utils.helpers import DataStorageHelpers as dsh
 from core.DataStorage.Utils.config_parser import DBConfigParser
 
 
-class DataTableCreation():
+class DataTableCreation:
     """
     This class manages all steps of creating the tables for the database depending on the users config file
 
@@ -52,13 +52,13 @@ class DataTableCreation():
         metadata_list = []
         for sec_type in self.config_info.security_types:
             script_prefix = sec_type.lower()
-            metadata_path = dsh.create_script_path(self.sql_base_path, script_prefix=script_prefix, script_suffix='table')
+            metadata_path = dsh.create_script_path(self.sql_base_path, script_prefix=script_prefix, script_suffix='tables')
             metadata_list.append(metadata_path)
         if self.equities_flag:
-            metadata_path = dsh.create_script_path(self.sql_base_path, 'equities', script_suffix='table')
+            metadata_path = dsh.create_script_path(self.sql_base_path, 'equities', script_suffix='tables')
             metadata_list.append(metadata_path)
         if self.underlying_flag:
-            metadata_path = dsh.create_script_path(self.sql_base_path, 'underlying_assets', script_suffix='table')
+            metadata_path = dsh.create_script_path(self.sql_base_path, 'underlying_assets', script_suffix='tables')
             metadata_list.append(metadata_path)
         return metadata_list
     
@@ -71,8 +71,8 @@ class DataTableCreation():
         """
         if self.config_info.market_data_flag:
             try:
-                if self.config_info.db_dialect in ("sqlite3", "sqlite") and not self.config_info.mkt_data_db_path.startswith('sqlite:///'):
-                    engine_path = 'sqlite:///' + self.config_info.mkt_data_db_path
+                if self.config_info.db_dialect in ("sqlite3", "sqlite") and not self.config_info.db_path.startswith('sqlite:///'):
+                    engine_path = 'sqlite:///' + self.config_info.db_path
                 mkt_data_engine = create_engine(engine_path)
                 return mkt_data_engine
             except Exception as e:
@@ -142,16 +142,6 @@ class DataTableCreation():
                 transact.rollback()
                 self.logger.error(f'Error creating the portfolio analysis tables', exc_info=True)
                 raise
-
-    def create_input_features_table(self, mkt_data_engine:Engine, features_used:dict) -> None:
-        """
-        Creates all necessary tables for the portfolio analysis schema
-
-        Args:
-        - mkt_data_engine (Engine): A SQLAlchemy engine for the specified database instane, created in the initalize_mkt_data_engine method
-        """
-        ##TODO: Create and test this method
-        pass
 
     def create_tables(self) -> None:
         """

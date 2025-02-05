@@ -20,7 +20,7 @@ class DBConfigParser:
     - ohlcv_flag (bool):
     - quotes_flag (bool):  
     - db_dialect (str):
-    - mkt_data_db_path (str):
+    - db_path (str):
     - portfolio_data_db_path (str):
     - security_types (list[str]):
     - seed_data (list[str]):
@@ -72,8 +72,7 @@ class DBConfigParser:
         """
         db_info:dict[str, str] = self.config_data['database']
         self.db_dialect = db_info['dialect']
-        self.mkt_data_db_path = db_info['mkt_data_db_path']
-        self.portfolio_data_db_path = db_info['portfolio_data_db_path']
+        self.db_path = db_info['db_path']
         return db_info
     
     def parse_list_info(self) -> None:

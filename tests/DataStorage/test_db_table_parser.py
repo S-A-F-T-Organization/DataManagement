@@ -4,14 +4,14 @@ from sqlalchemy import text
 from sqlalchemy.engine import Engine
 from unittest.mock import patch, mock_open, MagicMock, ANY
 
-from core.DataStorage.Utils.table_creation import DBTableCreation
+from core.DataStorage.Utils.table_creation import DataTableCreation
 from core.DataStorage.Utils.helpers import DataStorageHelpers as dsh
 from core.DataStorage.Utils.config_parser import DBConfigParser
 
 class TestDBTableCreation(unittest.TestCase):
     def setUp(self):
         # Create an instance of DBTableCreation without loading a config file
-        self.dbtable = DBTableCreation.__new__(DBTableCreation)
+        self.dbtable = DataTableCreation.__new__(DataTableCreation)
         
         # Manually set all attributes created during initialization
         self.dbtable.config_info = DBConfigParser()
@@ -20,7 +20,7 @@ class TestDBTableCreation(unittest.TestCase):
         self.dbtable.config_info.ohlcv_flag = True
         self.dbtable.config_info.market_data_flag = True
         self.dbtable.config_info.db_dialect = 'sqlite'
-        self.dbtable.config_info.mkt_data_db_path = ':memory:'
+        self.dbtable.config_info.db_path = ':memory:'
         self.dbtable.sql_base_path = 'core/DataStorage/TableCreationSQL'
         self.dbtable.logger = dsh.setup_log_to_console()
         self.dbtable.equities_flag = True
@@ -76,7 +76,7 @@ class TestDBTableCreation(unittest.TestCase):
         base_path = "some/base/path"
         script_prefix = "testprefix"
         expected = os.path.join(base_path, "testprefix_tables.sql")
-        result = DBTableCreation.create_metadata_path(base_path, script_prefix)
+        result = dsh.create_script_path(base_path, script_prefix, 'tables')
         self.assertEqual(result, expected)
     
     def test_create_metadata_list_all_sec_types(self):
@@ -97,17 +97,17 @@ class TestDBTableCreation(unittest.TestCase):
         self.assertIn(expected_equities, metadata_list)
         self.assertIn(expected_underlying, metadata_list)
 
-    def test_initalize_mkt_data_engine(self):
+    def test_initalize_db_engine(self):
         """
         Test that initalize_mkt_data_db returns a valid SQLAlchemy Engine when market_data_flag is True.
         """
-        engine = self.dbtable.initalize_mkt_data_engine()
+        engine = self.dbtable.initalize_db_engine()
         self.assertIsInstance(engine, Engine)
         # With mkt_data_db_path = ':memory:' and db_dialect = 'sqlite', the engine URL should start with "sqlite:///".
         self.assertTrue(engine.url.drivername.startswith('sqlite'))
 
     @patch("builtins.open", new_callable=mock_open, read_data="SELECT 1;")
-    def test_create_mkt_data_core(self, mock_file):
+    def test_create_core(self, mock_file):
         """
         Test that create_mkt_data_core reads the SQL script file(s)
         and calls execute on the connection.
@@ -131,7 +131,7 @@ class TestDBTableCreation(unittest.TestCase):
         self.dbtable.create_core_list = MagicMock(return_value=[dummy_file])
 
         # Call the method.
-        self.dbtable.create_mkt_data_core(fake_engine)
+        self.dbtable.create_core_tables(fake_engine)
 
         # Check that the file was opened.
         mock_file.assert_called_with(dummy_file, 'r')
