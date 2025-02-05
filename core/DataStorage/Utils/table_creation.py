@@ -13,8 +13,7 @@ class DataTableCreation:
 
     Attributes:
     """
-    def __init__(self, feature_info:dict):
-        self.feature_info = feature_info
+    def __init__(self):
         self.logger = dsh.setup_log_to_console()
         # Get config info
         self.config_info = DBConfigParser()
