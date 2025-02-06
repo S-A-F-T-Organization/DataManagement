@@ -13,7 +13,7 @@ This is our core repository for managing data, and will be open source. As of no
 ```
 DataManagement/
 ├── config/
-│   ├── database_config_template.yml # Users can specify different setups, i.e. equities only, futures only, core 4, all 
+│   ├── database_config_template.yml # Users can specify different setups, i.e. equities only, futures only,
 │   └── ...
 ├── core/
 │   ├── __init__.py
@@ -31,13 +31,6 @@ DataManagement/
 │   │   ├── market_data_etl.py
 │   │   ├── portfolio_etl.py
 │   │   └── ...
-│   ├── models/ # Custom objects if needed
-│   │   ├── security.py # Custom objects for things such as stocks, futures, etc.
-│   │   ├── trade.py 
-│   │   └── ...
-│   └── ...
-├── scripts/ # general scripts for things such as a user interface/cli
-│   ├── cli.py
 │   └── ...
 ├── tests/ # testing suite
 │   ├── test_broker_integrations/

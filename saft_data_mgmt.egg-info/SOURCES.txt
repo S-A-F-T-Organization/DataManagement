@@ -1,0 +1,10 @@
+LICENSE
+README.md
+setup.py
+core/__init__.py
+saft_data_mgmt.egg-info/PKG-INFO
+saft_data_mgmt.egg-info/SOURCES.txt
+saft_data_mgmt.egg-info/dependency_links.txt
+saft_data_mgmt.egg-info/requires.txt
+saft_data_mgmt.egg-info/top_level.txt
+tests/__init__.py

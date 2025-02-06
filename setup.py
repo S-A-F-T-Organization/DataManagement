@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="saftdatamgmt",
+    name="saft_data_mgmt",
     version="0.1.0",
     description="A package for managing financial data, specifically made for algorithmic traders",
     author="Travis Swiger",
@@ -17,5 +17,8 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
+    extras_require={
+        "dev": ["twine>=4.0.2"],
+    },
     python_requires='>=3.7',
 )
