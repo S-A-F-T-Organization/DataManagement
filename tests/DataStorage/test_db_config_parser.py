@@ -3,7 +3,7 @@ import yaml
 from unittest.mock import mock_open, patch
 
 # Adjust the import as needed to point to where DBConfigParser is defined.
-from core.DataStorage.Utils.config_parser import DBConfigParser
+from src.DataStorage.Utils.config_parser import DBConfigParser
 
 
 class TestDBConfigParser(unittest.TestCase):

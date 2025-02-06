@@ -1,7 +1,7 @@
 import unittest
 import tempfile
 import os
-from core.DataStorage.db_initializer import DBInitializer
+from src.DataStorage.db_initializer import DBInitializer
 from sqlalchemy import Engine
 
 class TestDBInitializer(unittest.TestCase):
