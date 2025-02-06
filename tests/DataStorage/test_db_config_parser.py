@@ -17,8 +17,7 @@ schemas:
   quotes: false
 database:
   dialect: sqlite
-  mkt_data_db_path: "mkt_data.db"
-  portfolio_data_db_path: "portfolio_data.db"
+  db_path: "saft_data.db"
 security_types:
   - " stk "
   - " etf"
@@ -53,8 +52,7 @@ seed_data:
         db_info = self.config_parser.parse_db_info()
         self.assertEqual(db_info, expected_config['database'])
         self.assertEqual(self.config_parser.db_dialect, expected_config['database']['dialect'])
-        self.assertEqual(self.config_parser.mkt_data_db_path, expected_config['database']['mkt_data_db_path'])
-        self.assertEqual(self.config_parser.portfolio_data_db_path, expected_config['database']['portfolio_data_db_path'])
+        self.assertEqual(self.config_parser.db_path, expected_config['database']['db_path'])
 
         # Test that parse_list_info retrieves the lists as expected.
         self.config_parser.parse_list_info()
@@ -83,8 +81,7 @@ seed_data:
         expected_db_info = yaml.safe_load(self.valid_yaml)['database']
         self.assertEqual(db_info, expected_db_info)
         self.assertEqual(self.config_parser.db_dialect, expected_db_info['dialect'])
-        self.assertEqual(self.config_parser.mkt_data_db_path, expected_db_info['mkt_data_db_path'])
-        self.assertEqual(self.config_parser.portfolio_data_db_path, expected_db_info['portfolio_data_db_path'])
+        self.assertEqual(self.config_parser.db_path, expected_db_info['db_path'])
 
     def test_normalize_sec_types(self):
         self.config_parser.parse_list_info()
@@ -117,8 +114,7 @@ schemas:
   quotes: true
 database:
   dialect: sqlite
-  mkt_data_db_path: "mkt_data.db"
-  portfolio_data_db_path: "portfolio_data.db"
+  db_path: "saft_data.db"
 security_types:
   - "STK"
 seed_data:
@@ -141,8 +137,7 @@ schemas:
   quotes: false
 database:
   dialect: sqlite
-  mkt_data_db_path: "mkt_data.db"
-  portfolio_data_db_path: "portfolio_data.db"
+  db_path: "saft_data.db"
 security_types:
   - "STK"
 seed_data:
@@ -172,8 +167,7 @@ schemas:
   quotes: false
 database:
   dialect: postgres
-  mkt_data_db_path: "mkt_data.db"
-  portfolio_data_db_path: "portfolio_data.db"
+  db_path: "saft_data.db"
 security_types:
   - "STK"
 seed_data:
@@ -204,8 +198,7 @@ schemas:
   quotes: false
 database:
   dialect: sqlite
-  mkt_data_db_path: "mkt_data.db"
-  portfolio_data_db_path: "portfolio_data.db"
+  db_path: "saft_data.db"
 security_types:
   - "OPT"
 seed_data:
@@ -228,8 +221,7 @@ schemas:
   quotes: false
 database:
   dialect: sqlite
-  mkt_data_db_path: "mkt_data.db"
-  portfolio_data_db_path: "portfolio_data.db"
+  db_path: "saft_data.db"
 security_types:
   - "XYZ"
 seed_data:

@@ -1,5 +1,6 @@
 import yaml
-from src.DataStorage.Utils.helpers import DataStorageHelpers as dsh
+from src.Utils.helpers import DataMgmtHelpers as dmh
+
 import warnings
 from typing import Any, Dict, List
 
@@ -34,7 +35,7 @@ class DBConfigParser:
     """
 
     def __init__(self, config_path:str='config/my_config.yml'):
-        self.logger = dsh.setup_log_to_console()
+        self.logger = dmh.setup_log_to_console()
         # Read in the config file information
         try:
             # Read in YAML config file

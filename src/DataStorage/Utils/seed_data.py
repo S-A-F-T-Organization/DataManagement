@@ -1,12 +1,13 @@
 from sqlalchemy import create_engine, Engine, text
-
+import config
 from src.DataStorage.Utils.helpers import DataStorageHelpers as dsh
+from src.Utils.helpers import DataMgmtHelpers as dmh
 from src.DataStorage.Utils.config_parser import DBConfigParser
 
 class InputSeedData:
 
     def __init__(self):
-        self.logger = dsh.setup_log_to_console()
+        self.logger = dmh.setup_log_to_console()
         self.config_info = DBConfigParser()
         self.seed_data_base_path = 'core/DataStorage/SeedDataSQL'
 

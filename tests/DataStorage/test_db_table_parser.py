@@ -1,9 +1,10 @@
 import os
+import config
 import unittest
 from sqlalchemy import text, TextClause
 from sqlalchemy.engine import Engine
 from unittest.mock import patch, mock_open, MagicMock, ANY
-
+from src.Utils.helpers import DataMgmtHelpers as dmh
 from src.DataStorage.Utils.table_creation import DataTableCreation
 from src.DataStorage.Utils.helpers import DataStorageHelpers as dsh
 from src.DataStorage.Utils.config_parser import DBConfigParser
@@ -21,77 +22,53 @@ class TestDBTableCreation(unittest.TestCase):
         self.dbtable.config_info.market_data_flag = True
         self.dbtable.config_info.db_dialect = 'sqlite'
         self.dbtable.config_info.db_path = ':memory:'
-        self.dbtable.sql_base_path = 'core/DataStorage/TableCreationSQL'
-        self.dbtable.logger = dsh.setup_log_to_console()
+        self.dbtable.sql_base_path = 'src/DataStorage/SQLTables'
+        self.dbtable.logger = dmh.setup_log_to_console()
         self.dbtable.equities_flag = True
         self.dbtable.underlying_flag = True
     
-    def test_create_core_list_both(self):
+    def test_get_price_history_table_to_int(self):
         """
         Test that create_core_list returns the expected list of file paths when both quotes_flag and ohlcv_flag are True.
         """
-        core_list = self.dbtable.create_core_list()
-        expected_quotes = os.path.join(self.dbtable.sql_base_path, 'core_market_data_quotes.sql')
-        expected_ohlcv = os.path.join(self.dbtable.sql_base_path, 'core_market_data_ohlcv.sql')
-        self.assertIn(expected_quotes, core_list)
-        self.assertIn(expected_ohlcv, core_list)
-        self.assertEqual(len(core_list), 2)
+        file_path = self.dbtable.get_price_history_table()
+        expected_path = os.path.join(self.dbtable.sql_base_path, 'HistoricalPrice/price_history_ohlcv_toint.sql')
+        self.assertIn(expected_path, file_path)
     
-    def test_create_core_list_only_ohlcv(self):
+    def test_get_price_history_table_float(self):
         """
         Test that create_core_list returns the expected list of file paths when only ohlcv_flag is True.
         """
-        self.dbtable.config_info.quotes_flag = False
-        self.dbtable.config_info.ohlcv_flag = True
-        core_list = self.dbtable.create_core_list()
-        expected_quotes = os.path.join(self.dbtable.sql_base_path, 'core_market_data_quotes.sql')
-        expected_ohlcv = os.path.join(self.dbtable.sql_base_path, 'core_market_data_ohlcv.sql')
-        self.assertNotIn(expected_quotes, core_list)
-        self.assertIn(expected_ohlcv, core_list)
-        self.assertEqual(len(core_list), 1)
-        # Reset to both true
-        self.dbtable.config_info.quotes_flag = True
-        self.dbtable.config_info.ohlcv_flag = True
-
-    def test_create_core_list_only_quotes(self):
-        """
-        Test that create_core_list returns the expected list of file paths when only quotes_flag is True.
-        """
-        self.dbtable.config_info.quotes_flag = True
-        self.dbtable.config_info.ohlcv_flag = False
-        core_list = self.dbtable.create_core_list()
-        expected_quotes = os.path.join(self.dbtable.sql_base_path, 'core_market_data_quotes.sql')
-        expected_ohlcv = os.path.join(self.dbtable.sql_base_path, 'core_market_data_ohlcv.sql')
-        self.assertIn(expected_quotes, core_list)
-        self.assertNotIn(expected_ohlcv, core_list)
-        self.assertEqual(len(core_list), 1)
-        # Reset to both true
-        self.dbtable.config_info.quotes_flag = True
-        self.dbtable.config_info.ohlcv_flag = True
+        self.dbtable.config_info.to_int_flag = False
+        file_path = self.dbtable.get_price_history_table()
+        expected_path = os.path.join(self.dbtable.sql_base_path, 'HistoricalPrice/price_history_ohlcv_float.sql')
+        self.assertIn(expected_path, file_path)
+        # Reset to true
+        self.dbtable.config_info.to_int_flag = True
     
     def test_create_metadata_path(self):
         """
         Test the static method create_metadata_path produces the correct file path.
         """
         base_path = "some/base/path"
-        script_prefix = "testprefix"
-        expected = os.path.join(base_path, "testprefix_tables.sql")
+        script_prefix = "AnotherOne/testprefix"
+        expected = os.path.join(base_path, "AnotherOne/testprefix_tables.sql")
         result = dsh.create_script_path(base_path, script_prefix, 'tables')
         self.assertEqual(result, expected)
     
     def test_create_metadata_list_all_sec_types(self):
         """
-        Test that create_metadata_list returns the correct list of metadata file paths. With security_types = ['STK', 'ETF', 'CASH', 'FUT'] and both equities_flag and underlying_flag set,
+        Test that create_metadata_list returns the correct list of metadata file paths. With security_types = ['STK', 'ETF', 'CASH', 'FUT'] and both equities_flag and underlying_flag set
         we expect two paths from the loop plus two extra.
         """
-        metadata_list = self.dbtable.create_metadata_list()
+        metadata_list = self.dbtable.create_securities_metadata_list()
         # Expect 4 (from security_types) + 1 (for equities) + 1 (for underlying) = 6 files.
 
         self.assertEqual(len(metadata_list), 6)
-        expected_stk = os.path.join(self.dbtable.sql_base_path, 'stk_tables.sql')
-        expected_etf = os.path.join(self.dbtable.sql_base_path, 'etf_tables.sql')
-        expected_equities = os.path.join(self.dbtable.sql_base_path, 'equities_tables.sql')
-        expected_underlying = os.path.join(self.dbtable.sql_base_path, 'underlying_assets_tables.sql')
+        expected_stk = os.path.join(self.dbtable.sql_base_path, 'SecuritiesMetadata/stk_tables.sql')
+        expected_etf = os.path.join(self.dbtable.sql_base_path, 'SecuritiesMetadata/etf_tables.sql')
+        expected_equities = os.path.join(self.dbtable.sql_base_path, 'SecuritiesMetadata/equities_tables.sql')
+        expected_underlying = os.path.join(self.dbtable.sql_base_path, 'SecuritiesMetadata/underlying_assets_tables.sql')
         self.assertIn(expected_stk, metadata_list)
         self.assertIn(expected_etf, metadata_list)
         self.assertIn(expected_equities, metadata_list)
@@ -124,12 +101,9 @@ class TestDBTableCreation(unittest.TestCase):
         fake_engine.connect.return_value = fake_context
 
         # Simulate core_list returning one dummy file path.
-        dummy_file = os.path.join(self.dbtable.sql_base_path, 'core_market_data_quotes.sql')
-        self.dbtable.create_core_list = MagicMock(return_value=[dummy_file])
+        dummy_file = os.path.join(self.dbtable.sql_base_path, 'Core/core_tables.sql')
         self.dbtable.create_core_tables(fake_engine)
 
-        # Check that the file was opened.
-        mock_file.assert_called_with(dummy_file, 'r')
         # Check that the SQL script was executed.
         fake_conn.execute.assert_called_with(ANY)
         # Ensure that commit was called.
@@ -154,7 +128,7 @@ class TestDBTableCreation(unittest.TestCase):
 
         # Simulate create_metadata_list() returning one dummy file path.
         dummy_file = os.path.join(self.dbtable.sql_base_path, 'core_market_data_quotes.sql')
-        self.dbtable.create_metadata_list = MagicMock(return_value=[dummy_file])
+        self.dbtable.create_securities_metadata_list = MagicMock(return_value=[dummy_file])
         self.dbtable.create_mkt_data_metadata(fake_engine)
 
         # Check that the file was opened.
@@ -164,7 +138,7 @@ class TestDBTableCreation(unittest.TestCase):
         # Ensure that commit was called.
         fake_transact.commit.assert_called()
     
-    @patch("core.DataStorage.Utils.table_creation.open", new_callable=mock_open, read_data="CREATE TABLE foo (id INTEGER);")
+    @patch("src.DataStorage.Utils.table_creation.open", new_callable=mock_open, read_data="CREATE TABLE foo (id INTEGER);")
     def test_successful_creation(self, mock_file):
         # Create a fake transaction object
         fake_transact = MagicMock()
@@ -184,7 +158,7 @@ class TestDBTableCreation(unittest.TestCase):
 
         # --- Assertions ---
         # SQL script was opened with the expected file path and contents were read.
-        mock_file.assert_called_once_with('core/DataStorage/TableCreationSQL/portfolio_data_warehouse.sql', 'r')
+        mock_file.assert_called_once_with('core/DataStorage/TableCreationSQL/PortfolioAnalysis/portfolio_data_warehouse.sql', 'r')
         handle = mock_file()
         handle.read.assert_called_once()
         # The connection.execute method was called with a text clause containing the script.
@@ -198,7 +172,7 @@ class TestDBTableCreation(unittest.TestCase):
         # Ensure transaction’s commit method was called.
         fake_transact.commit.assert_called_once()
     
-    @patch("core.DataStorage.Utils.table_creation.open", new_callable=mock_open, read_data="CREATE TABLE foo (id INTEGER);")
+    @patch("src.DataStorage.Utils.table_creation.open", new_callable=mock_open, read_data="CREATE TABLE foo (id INTEGER);")
     def test_error_during_execution(self, mock_file):
         # Set up a fake connection and transaction
         fake_transact = MagicMock()

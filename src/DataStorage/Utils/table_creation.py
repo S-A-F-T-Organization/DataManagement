@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine, Engine, text
 import os
 from src.DataStorage.Utils.helpers import DataStorageHelpers as dsh
+from src.Utils.helpers import DataMgmtHelpers as dmh
 from src.DataStorage.Utils.config_parser import DBConfigParser
 
 
@@ -14,34 +15,31 @@ class DataTableCreation:
     Attributes:
     """
     def __init__(self):
-        self.logger = dsh.setup_log_to_console()
+        self.logger = dmh.setup_log_to_console()
         # Get config info
         self.config_info = DBConfigParser()
         # Base path for SQL scripts
-        self.sql_base_path = 'core/DataStorage/TableCreationSQL'
+        self.sql_base_path = 'src/DataStorage/SQLTables'
         # Set flags for tables shared between multiple security types
         if ('STK' in self.config_info.security_types or 'ETF' in self.config_info.security_types or 'FUND' in self.config_info.security_types):
             self.equities_flag = True
         if ('STK' in self.config_info.security_types or 'FUT' in self.config_info.security_types):
             self.underlying_flag = True
  
-    def create_core_list(self) -> list[str]:
+    def get_price_history_table(self) -> str:
         """
-        This creates a list of the core table files to include
+        This creates a list of the core price history table files to include
 
         Returns:
-        - core_list (list): a list of the file paths to the core tables to include in the database
+        - price_history_path (str): a string of the file path to the chosen price history table schema
         """
-        core_list = []
-        if self.config_info.quotes_flag:
-            quotes_core = os.path.join(self.sql_base_path, 'core_market_data_quotes.sql')
-            core_list.append(quotes_core)
-        if self.config_info.ohlcv_flag:
-            quotes_core = os.path.join(self.sql_base_path, 'core_market_data_ohlcv.sql')
-            core_list.append(quotes_core)
-        return core_list
+        if self.config_info.to_int_flag:
+            price_history_path = os.path.join(self.sql_base_path, 'HistoricalPrice/price_history_ohlcv_toint.sql')
+        else:
+            price_history_path = os.path.join(self.sql_base_path, 'HistoricalPrice/price_history_ohlcv_float.sql')
+        return price_history_path
 
-    def create_metadata_list(self) -> list[str]:
+    def create_securities_metadata_list(self) -> list[str]:
         """
         This creates a list of file paths to the metadata table scripts to include in database setup
 
@@ -50,14 +48,14 @@ class DataTableCreation:
         """
         metadata_list = []
         for sec_type in self.config_info.security_types:
-            script_prefix = sec_type.lower()
+            script_prefix = f'SecuritiesMetadata/{sec_type.lower()}'
             metadata_path = dsh.create_script_path(self.sql_base_path, script_prefix=script_prefix, script_suffix='tables')
             metadata_list.append(metadata_path)
         if self.equities_flag:
-            metadata_path = dsh.create_script_path(self.sql_base_path, 'equities', script_suffix='tables')
+            metadata_path = dsh.create_script_path(self.sql_base_path, 'SecuritiesMetadata/equities', script_suffix='tables')
             metadata_list.append(metadata_path)
         if self.underlying_flag:
-            metadata_path = dsh.create_script_path(self.sql_base_path, 'underlying_assets', script_suffix='tables')
+            metadata_path = dsh.create_script_path(self.sql_base_path, 'SecuritiesMetadata/underlying_assets', script_suffix='tables')
             metadata_list.append(metadata_path)
         return metadata_list
     
@@ -75,7 +73,7 @@ class DataTableCreation:
                 mkt_data_engine = create_engine(engine_path)
                 return mkt_data_engine
             except Exception as e:
-                self.logger.error("Error ocurred while initializing the market data engine:", e)
+                self.logger.error("Error ocurred while initializing the market data engine:", exc_info=True)
                 raise
         else:
             return None
@@ -87,20 +85,40 @@ class DataTableCreation:
         Args:
         - mkt_data_engine (Engine): A SQLAlchemy engine for the specified database instane, created in the initalize_mkt_data_engine method
         """
-        core_list = self.create_core_list()
+        core_tables = 'src/DataStorage/SQLTables/Core/core_tables.sql'
         with mkt_data_engine.connect() as conn:
             transact = conn.begin()
-            for core_file in core_list:
-                try:
-                    with open(core_file, 'r') as f:
-                        script = f.read()
-                        conn.execute(text(script))
-                    transact.commit()
-                except Exception as e:
-                    transact.rollback()
-                    self.logger.error(f'Error creating the core tables', exc_info=True)
-                    raise
+            try:
+                with open(core_tables, 'r') as f:
+                    script = f.read()
+                    conn.execute(text(script))
+                transact.commit()
+            except Exception as e:
+                transact.rollback()
+                self.logger.error(f'Error creating the core tables', exc_info=True)
+                raise
         self.logger.info("Successfully initialized core tables...")
+
+    def create_price_history_table(self, mkt_data_engine:Engine) -> None:
+        """
+        Creates the price history table for market data database
+
+        Args:
+        - mkt_data_engine (Engine): A SQLAlchemy engine for the specified database instane, created in the initalize_mkt_data_engine method
+        """
+        price_history_table = self.get_price_history_table()
+        with mkt_data_engine.connect() as conn:
+            transact = conn.begin()
+            try:
+                with open(price_history_table, 'r') as f:
+                    script = f.read()
+                    conn.execute(text(script))
+                transact.commit()
+            except Exception as e:
+                transact.rollback()
+                self.logger.error(f'Error creating the core tables', exc_info=True)
+                raise
+        self.logger.info("Successfully initialized the chosen price history table...")
             
     
     def create_mkt_data_metadata(self, mkt_data_engine:Engine) -> None:
@@ -110,7 +128,7 @@ class DataTableCreation:
         Args:
         - mkt_data_engine (Engine): A SQLAlchemy engine for the specified database instane, created in the initalize_mkt_data_engine method
         """
-        metadata_list = self.create_metadata_list()
+        metadata_list = self.create_securities_metadata_list()
         with mkt_data_engine.connect() as conn:
             transact = conn.begin()
             for metadata_file in metadata_list:
@@ -133,11 +151,10 @@ class DataTableCreation:
         Args:
         - mkt_data_engine (Engine): A SQLAlchemy engine for the specified database instane, created in the initalize_mkt_data_engine method
         """
-        ##TODO: Create tests for this method
         with mkt_data_engine.connect() as conn:
             transact = conn.begin()
             try:
-                with open('core/DataStorage/TableCreationSQL/portfolio_data_warehouse.sql', 'r') as f:
+                with open('core/DataStorage/TableCreationSQL/PortfolioAnalysis/portfolio_data_warehouse.sql', 'r') as f:
                     script = f.read()
                     conn.execute(text(script))
                 transact.commit()
@@ -155,6 +172,7 @@ class DataTableCreation:
         mkt_data_engine = self.initalize_db_engine()
         self.create_core_tables(mkt_data_engine)
         if self.config_info.market_data_flag:
+            self.create_price_history_table(mkt_data_engine)
             self.create_mkt_data_metadata(mkt_data_engine)
         if self.config_info.portfolio_data_flag:
             self.create_portfolio_analysis_tables(mkt_data_engine)
