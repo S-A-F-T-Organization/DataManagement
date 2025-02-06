@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine, Engine, text
 
-from core.DataStorage.Utils.helpers import DataStorageHelpers as dsh
-from core.DataStorage.Utils.config_parser import DBConfigParser
+from src.DataStorage.Utils.helpers import DataStorageHelpers as dsh
+from src.DataStorage.Utils.config_parser import DBConfigParser
 
 class InputSeedData:
 

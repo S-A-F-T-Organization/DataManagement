@@ -4,9 +4,9 @@ from sqlalchemy import text, TextClause
 from sqlalchemy.engine import Engine
 from unittest.mock import patch, mock_open, MagicMock, ANY
 
-from core.DataStorage.Utils.table_creation import DataTableCreation
-from core.DataStorage.Utils.helpers import DataStorageHelpers as dsh
-from core.DataStorage.Utils.config_parser import DBConfigParser
+from src.DataStorage.Utils.table_creation import DataTableCreation
+from src.DataStorage.Utils.helpers import DataStorageHelpers as dsh
+from src.DataStorage.Utils.config_parser import DBConfigParser
 
 class TestDBTableCreation(unittest.TestCase):
     def setUp(self):
