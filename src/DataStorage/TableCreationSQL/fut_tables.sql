@@ -6,4 +6,9 @@ CREATE TABLE IF NOT EXISTS FuturesMetadata(
     [TickValue] REAL,
     [UnderlyingAssetTypeID] INTEGER,
     [UnderlyingAsset] TEXT,
+    UNIQUE (SymbolID)
+    FOREIGN KEY (UnderlyingAssetTypeID)
+        REFERENCES UnderlyingAssetTypes(UnderlyingAssetTypeID),
+    FOREIGN KEY (SymbolID)
+        REFERENCES SecuritiesInfo(SymbolID)
 )

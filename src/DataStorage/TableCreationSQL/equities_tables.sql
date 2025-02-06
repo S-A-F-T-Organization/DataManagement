@@ -1,23 +1,35 @@
 CREATE TABLE IF NOT EXISTS FundamentalSnapshots (
-    [SymbolID] INTEGER PRIMARY KEY,
+    [SymbolID] INTEGER,
     [DateTime] TEXT,
-    [MarketCap] REAL
+    [MarketCap] REAL,
+    PRIMARY KEY ([SymbolID], [DateTime]),
+    FOREIGN KEY (SymbolID)
+        REFERENCES SecuritiesInfo(SymbolID)
 )
 
 CREATE TABLE IF NOT EXISTS DividendHistory (
     [SymbolID] INTEGER PRIMARY KEY,
     [DateTime] TEXT,
-    [Dividend] REAL
+    [Dividend] REAL,
+    PRIMARY KEY ([SymbolID], [DateTime]),
+    FOREIGN KEY (SymbolID)
+        REFERENCES SecuritiesInfo(SymbolID)
 )
 
 CREATE TABLE IF NOT EXISTS EarningsHistory (
     [SymbolID] INTEGER PRIMARY KEY,
     [DateTime] TEXT,
-    [Earnings] REAL
+    [Earnings] REAL,
+    PRIMARY KEY ([SymbolID], [DateTime]),
+    FOREIGN KEY (SymbolID)
+        REFERENCES SecuritiesInfo(SymbolID)
 )
 
 CREATE TABLE IF NOT EXISTS StockSplits (
     [SymbolID] INTEGER PRIMARY KEY,
     [DateTime] TEXT,
-    [Split] REAL
+    [Split] INTEGER,
+    PRIMARY KEY ([SymbolID], [DateTime]),
+    FOREIGN KEY (SymbolID)
+        REFERENCES SecuritiesInfo(SymbolID)
 )
