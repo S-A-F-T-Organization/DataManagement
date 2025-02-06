@@ -1,0 +1,5 @@
+SQLAlchemy>=1.4
+PyYAML
+
+[dev]
+twine>=4.0.2
