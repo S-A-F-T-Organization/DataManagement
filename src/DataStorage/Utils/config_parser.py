@@ -212,3 +212,4 @@ class DBConfigParser:
         self.parse_all()
         self.norm_all()
         self.check_all()
+        return self.config_info
