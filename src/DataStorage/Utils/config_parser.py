@@ -208,7 +208,7 @@ class DBConfigParser:
 
         Returns:
             ConfigInfo: _description_
-        """        
+        """
         self.parse_all()
         self.norm_all()
         self.check_all()

@@ -1,11 +1,13 @@
-import logging
+""" This has all of the helper functions that are only used in the DataStorage module """
 import os
 
 class DataStorageHelpers:
-
+    """
+    _summary_
+    """
     def __init__(self):
         pass
-    
+
     @staticmethod
     def create_script_path(base_path:str, script_prefix:str, script_suffix:str) -> str:
         """
@@ -18,3 +20,4 @@ class DataStorageHelpers:
         script_name = f"{script_prefix}_{script_suffix}.sql"
         script_path = os.path.join(base_path, script_name)
         return script_path
+    

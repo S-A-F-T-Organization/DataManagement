@@ -1,3 +1,4 @@
+""" This module will handle all of the updating functions if someone has an existing database """
 from src.Utils.helpers import DataMgmtHelpers as dmh
 
 
@@ -11,4 +12,15 @@ class DBUpdater:
     """
     def __init__(self):
         self.logger = dmh.setup_log_to_console()
-    
+
+    def update(self):
+        """
+        _summary_
+        """
+        pass
+
+    def more_update(self):
+        """
+        _summary_
+        """
+        pass
