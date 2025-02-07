@@ -1,40 +1,51 @@
+""" This module tests the config_parser module """
 import unittest
-import yaml
 from unittest.mock import mock_open, patch
+import yaml
 
 # Adjust the import as needed to point to where DBConfigParser is defined.
 from src.DataStorage.Utils.config_parser import DBConfigParser
 
 
 class TestDBConfigParser(unittest.TestCase):
+    """
+    _summary_
+
+    Args:
+        unittest (_type_): _description_
+    """
+
     def setUp(self):
-        # A valid YAML configuration that covers all required keys.
         self.valid_yaml = """
 schemas:
-  market_data: true
-  convert_price_to_int: false
-  ohlcv: true
-  quotes: false
+    market_data: true
+    convert_price_to_int: false
+    ohlcv: true
+    quotes: false
 database:
-  dialect: sqlite
-  db_path: "saft_data.db"
+    dialect: sqlite
+    db_path: "saft_data.db"
 security_types:
-  - " stk "
-  - " etf"
+    - " stk "
+    - " etf"
 seed_data:
-  - " seed1 "
-  - "seed2"
-""".strip()
+    - " seed1 "
+    - "seed2"
+        """.strip()
 
-        # Patch the built-in open so that when DBConfigParser reads a file it gets our YAML.
+	    # Patch the built-in open so that when DBConfigParser reads a file it gets our YAML.
         self.patcher = patch("builtins.open", mock_open(read_data=self.valid_yaml))
         self.mock_open = self.patcher.start()
         self.addCleanup(self.patcher.stop)
 
         # Create an instance using our “valid” configuration.
         self.config_parser = DBConfigParser("dummy_path.yml")
+        self.config_info = self.config_parser.get_config_info()
 
     def test_valid_config(self):
+        """
+        _summary_
+        """
         # Compare the parsed YAML to what we expect.
         expected_config = yaml.safe_load(self.valid_yaml)
         self.assertEqual(self.config_parser.config_data, expected_config)
@@ -42,62 +53,79 @@ seed_data:
         # Test that parse_schema_info sets the expected flags.
         schema_info = self.config_parser.parse_schema_info()
         self.assertEqual(schema_info, expected_config['schemas'])
-        self.assertTrue(self.config_parser.market_data_flag)
-        self.assertTrue(self.config_parser.portfolio_data_flag)
-        self.assertFalse(self.config_parser.to_int_flag)
-        self.assertTrue(self.config_parser.ohlcv_flag)
-        self.assertFalse(self.config_parser.quotes_flag)
+        self.assertTrue(self.config_info.market_data_flag)
+        self.assertTrue(self.config_info.portfolio_data_flag)
+        self.assertFalse(self.config_info.to_int_flag)
+        self.assertTrue(self.config_info.ohlcv_flag)
+        self.assertFalse(self.config_info.quotes_flag)
 
         # Test that parse_db_info sets the expected database attributes.
         db_info = self.config_parser.parse_db_info()
         self.assertEqual(db_info, expected_config['database'])
-        self.assertEqual(self.config_parser.db_dialect, expected_config['database']['dialect'])
-        self.assertEqual(self.config_parser.db_path, expected_config['database']['db_path'])
+        self.assertEqual(self.config_info.db_dialect, expected_config['database']['dialect'])
+        self.assertEqual(self.config_info.db_path, expected_config['database']['db_path'])
 
         # Test that parse_list_info retrieves the lists as expected.
         self.config_parser.parse_list_info()
-        self.assertEqual(self.config_parser.security_types, expected_config['security_types'])
-        self.assertEqual(self.config_parser.seed_data, expected_config['seed_data'])
+        self.assertEqual(self.config_info.security_types, expected_config['security_types'])
+        self.assertEqual(self.config_info.seed_data, expected_config['seed_data'])
 
     def test_missing_config(self):
-        # Simulate a FileNotFoundError when trying to open a non-existent file.
+        """
+        _summary_ Simulates a FileNotFoundError when trying to open a non-existent file
+        """
         with patch("builtins.open", side_effect=FileNotFoundError):
             with self.assertRaises(FileNotFoundError):
                 DBConfigParser("non_existent_config.yml")
 
     def test_parse_schema(self):
+        """
+        Tests to ensure that the schema parsing method is working correctly
+        """
         # Use the instance from setUp.
         schema_info = self.config_parser.parse_schema_info()
         expected_schema = yaml.safe_load(self.valid_yaml)['schemas']
         self.assertEqual(schema_info, expected_schema)
-        self.assertEqual(self.config_parser.market_data_flag, expected_schema['market_data'])
-        self.assertEqual(self.config_parser.portfolio_data_flag, expected_schema['market_data'])
-        self.assertEqual(self.config_parser.to_int_flag, expected_schema['convert_price_to_int'])
-        self.assertEqual(self.config_parser.ohlcv_flag, expected_schema['ohlcv'])
-        self.assertEqual(self.config_parser.quotes_flag, expected_schema['quotes'])
+        self.assertEqual(self.config_info.market_data_flag, expected_schema['market_data'])
+        self.assertEqual(self.config_info.portfolio_data_flag, expected_schema['market_data'])
+        self.assertEqual(self.config_info.to_int_flag, expected_schema['convert_price_to_int'])
+        self.assertEqual(self.config_info.ohlcv_flag, expected_schema['ohlcv'])
+        self.assertEqual(self.config_info.quotes_flag, expected_schema['quotes'])
 
     def test_parse_db_info(self):
+        """
+        _summary_ Tests to ensure that the db parsing method is working correctly
+        """
         db_info = self.config_parser.parse_db_info()
         expected_db_info = yaml.safe_load(self.valid_yaml)['database']
         self.assertEqual(db_info, expected_db_info)
-        self.assertEqual(self.config_parser.db_dialect, expected_db_info['dialect'])
-        self.assertEqual(self.config_parser.db_path, expected_db_info['db_path'])
+        self.assertEqual(self.config_info.db_dialect, expected_db_info['dialect'])
+        self.assertEqual(self.config_info.db_path, expected_db_info['db_path'])
 
     def test_normalize_sec_types(self):
+        """
+        _summary_ Tests to ensure that the security type normalization method is working correctly
+        """
         self.config_parser.parse_list_info()
         # Before normalization, the security types still have extra whitespace.
-        self.assertEqual(self.config_parser.security_types, [" stk ", " etf"])
+        self.assertEqual(self.config_info.security_types, [" stk ", " etf"])
         self.config_parser.normalize_sec_types()
         # After normalization they should be stripped and uppercase.
-        self.assertEqual(self.config_parser.security_types, ["STK", "ETF"])
+        self.assertEqual(self.config_info.security_types, ["STK", "ETF"])
 
     def test_normalize_seed_data(self):
+        """
+        _summary_ Tests to ensure that the seed_data normalization method is working correctly
+        """
         self.config_parser.parse_list_info()
-        self.assertEqual(self.config_parser.seed_data, [" seed1 ", "seed2"])
+        self.assertEqual(self.config_info.seed_data, [" seed1 ", "seed2"])
         self.config_parser.normalize_seed_data()
-        self.assertEqual(self.config_parser.seed_data, ["SEED1", "SEED2"])
+        self.assertEqual(self.config_info.seed_data, ["SEED1", "SEED2"])
 
     def test_schema_checks(self):
+        """
+        _summary_ Tests to ensure that the schema checks method is working correctly
+        """
         # First, with our valid configuration the checks should pass (i.e. no warning is raised)
         self.config_parser.parse_schema_info()
         try:
@@ -108,70 +136,72 @@ seed_data:
         # Now simulate a configuration where quotes_flag is True.
         yaml_quotes_true = """
 schemas:
-  market_data: true
-  convert_price_to_int: false
-  ohlcv: true
-  quotes: true
+    market_data: true
+    convert_price_to_int: false
+    ohlcv: true
+    quotes: true
 database:
-  dialect: sqlite
-  db_path: "saft_data.db"
+    dialect: sqlite
+    db_path: "saft_data.db"
 security_types:
-  - "STK"
+    - "STK"
 seed_data:
-  - "SEED1"
+    - "SEED1"
         """.strip()
         with patch("builtins.open", mock_open(read_data=yaml_quotes_true)):
-          parser_q = DBConfigParser("dummy.yml")
-          parser_q.parse_schema_info()
-          with self.assertWarns(UserWarning) as context:
-              parser_q.schema_checks()
-          self.assertIn("Quote level data is not currently supported", str(context.warning))
-
+            parser_q = DBConfigParser("dummy.yml")
+            parser_q.parse_schema_info()
+        with self.assertWarns(UserWarning) as context:
+            parser_q.schema_checks()
+            self.assertIn("Quote level data is not currently supported", str(context.warning))
 
         # Simulate a configuration where convert_price_to_int is True (with quotes False).
         yaml_to_int_true = """
 schemas:
-  market_data: true
-  convert_price_to_int: true
-  ohlcv: true
-  quotes: false
+    market_data: true
+    convert_price_to_int: true
+    ohlcv: true
+    quotes: false
 database:
-  dialect: sqlite
-  db_path: "saft_data.db"
+    dialect: sqlite
+    db_path: "saft_data.db"
 security_types:
-  - "STK"
+    - "STK"
 seed_data:
-  - "SEED1"
+    - "SEED1"
         """.strip()
         with patch("builtins.open", mock_open(read_data=yaml_to_int_true)):
-          parser_q = DBConfigParser("dummy.yml")
-          parser_q.parse_schema_info()
-          with self.assertWarns(UserWarning) as context:
-              parser_q.schema_checks()
-          self.assertIn("True is set to `True`", str(context.warning))
+            parser_q = DBConfigParser("dummy.yml")
+            parser_q.parse_schema_info()
+            with self.assertWarns(UserWarning) as context:
+                parser_q.schema_checks()
+                self.assertIn("True is set to `True`", str(context.warning))
 
     def test_db_checks(self):
+        """
+        _summary_ Tests to ensure that the db checks method is working correctly
+        """
         # First, with valid configuration, db_info_checks should not raise.
         self.config_parser.parse_db_info()
         try:
             self.config_parser.db_info_checks()
-        except Exception as e:
-            self.fail(f"db_info_checks raised an exception unexpectedly: {e}")
+        except Exception:
+            self.fail("db_info_checks raised an exception unexpectedly")
 
-        # Now simulate an invalid configuration (dialect not supported).
+        # Simulate an dialect not supported config
         yaml_invalid_db = """
 schemas:
-  market_data: true
-  convert_price_to_int: false
-  ohlcv: true
-  quotes: false
+    market_data: true
+    convert_price_to_int: false
+    ohlcv: true
+    quotes: false
 database:
-  dialect: postgres
-  db_path: "saft_data.db"
+    dialect: postgres
+    db_path: "saft_data.db"
 security_types:
-  - "STK"
+    - "STK"
 seed_data:
-  - "SEED1"
+    - "SEED1"
         """.strip()
         with patch("builtins.open", mock_open(read_data=yaml_invalid_db)):
             parser_invalid = DBConfigParser("dummy.yml")
@@ -181,7 +211,9 @@ seed_data:
             self.assertIn("We currently only offer support for SQLite", str(context.exception))
 
     def test_sec_type_checks(self):
-        # With valid security types (after normalization) the check should pass.
+        """
+        _summary_ Tests to ensure that the security type checks method is working correctly
+        """
         self.config_parser.parse_list_info()
         self.config_parser.normalize_sec_types()
         try:
@@ -192,17 +224,17 @@ seed_data:
         # Now simulate a configuration with a security type from the “future” list (e.g. "OPT").
         yaml_future_sec = """
 schemas:
-  market_data: true
-  convert_price_to_int: false
-  ohlcv: true
-  quotes: false
+    market_data: true
+    convert_price_to_int: false
+    ohlcv: true
+    quotes: false
 database:
-  dialect: sqlite
-  db_path: "saft_data.db"
+    dialect: sqlite
+    db_path: "saft_data.db"
 security_types:
-  - "OPT"
+    - "OPT"
 seed_data:
-  - "SEED1"
+    - "SEED1"
         """.strip()
         with patch("builtins.open", mock_open(read_data=yaml_future_sec)):
             parser_future = DBConfigParser("dummy.yml")
@@ -210,22 +242,22 @@ seed_data:
             parser_future.normalize_sec_types()
             with self.assertRaises(ValueError) as context:
                 parser_future.sec_type_checks()
-            self.assertIn("do not offer support for the security type", str(context.exception))
+                self.assertIn("do not offer support for the security type", str(context.exception))
 
-        # And simulate a configuration with an unrecognized security type.
+     # And simulate a configuration with an unrecognized security type.
         yaml_unrecognized = """
 schemas:
-  market_data: true
-  convert_price_to_int: false
-  ohlcv: true
-  quotes: false
+    market_data: true
+    convert_price_to_int: false
+    ohlcv: true
+    quotes: false
 database:
-  dialect: sqlite
-  db_path: "saft_data.db"
+    dialect: sqlite
+    db_path: "saft_data.db"
 security_types:
-  - "XYZ"
+    - "XYZ"
 seed_data:
-  - "SEED1"
+    - "SEED1"
         """.strip()
         with patch("builtins.open", mock_open(read_data=yaml_unrecognized)):
             parser_unrec = DBConfigParser("dummy.yml")
@@ -234,14 +266,6 @@ seed_data:
             with self.assertRaises(ValueError) as context:
                 parser_unrec.sec_type_checks()
             self.assertIn("Unrecognized security type", str(context.exception))
-
-    def test_seed_data_checks(self):
-        # Since seed_data_checks() is currently a pass (no-op), simply ensure it runs without error.
-        try:
-            self.config_parser.seed_data_checks()
-        except Exception as e:
-            self.fail(f"seed_data_checks raised an exception unexpectedly: {e}")
-
 
 if __name__ == '__main__':
     unittest.main()

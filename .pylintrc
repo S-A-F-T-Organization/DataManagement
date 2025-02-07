@@ -1,3 +1,4 @@
 [Format]
 max-line-length=135
 max-attributes=10
+disable=W0703
