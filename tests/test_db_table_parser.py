@@ -8,7 +8,7 @@ from sqlalchemy.engine import Engine
 from src.Utils.helpers import DataMgmtHelpers as dmh
 from src.DataStorage.Utils.table_creation import DataTableCreation
 from src.DataStorage.Utils.helpers import DataStorageHelpers as dsh
-from src.DataStorage.Utils.config_parser import DBConfigParser
+from src.DataStorage.Utils.config_parser import ConfigInfo
 
 class TestDBTableCreation(unittest.TestCase):
     """
@@ -22,7 +22,7 @@ class TestDBTableCreation(unittest.TestCase):
         self.dbtable = DataTableCreation.__new__(DataTableCreation)
 
         # Manually set all attributes created during initialization
-        self.dbtable.config_info = DBConfigParser()
+        self.dbtable.config_info = ConfigInfo()
         self.dbtable.config_info.security_types = ['STK', 'ETF', 'FUT', 'CASH']
         self.dbtable.config_info.quotes_flag = True
         self.dbtable.config_info.ohlcv_flag = True
@@ -92,7 +92,7 @@ class TestDBTableCreation(unittest.TestCase):
         self.assertTrue(engine.url.drivername.startswith('sqlite'))
 
     @patch("builtins.open", new_callable=mock_open, read_data="SELECT 1;")
-    def test_create_core(self):
+    def test_create_core(self, mock_file): # pylint: disable = W0613
         """
         Test that create_mkt_data_core reads the SQL script file(s) and calls execute on the connection.
         """
@@ -107,6 +107,7 @@ class TestDBTableCreation(unittest.TestCase):
         fake_context.__exit__.return_value = None
         fake_engine = MagicMock()
         fake_engine.connect.return_value = fake_context
+
         self.dbtable.create_core_tables(fake_engine)
 
         # Check that the SQL script was executed.
@@ -137,7 +138,7 @@ class TestDBTableCreation(unittest.TestCase):
         self.dbtable.create_mkt_data_metadata(fake_engine)
 
         # Check that the file was opened.
-        mock_file.assert_called_with(dummy_file, 'r')
+        mock_file.assert_called_with(dummy_file, 'r', encoding='utf-8')
         # Check that the SQL script was executed.
         fake_conn.execute.assert_called_with(ANY)
         # Ensure that commit was called.
@@ -164,12 +165,16 @@ class TestDBTableCreation(unittest.TestCase):
         fake_engine = MagicMock(spec=Engine)
         fake_engine.connect.return_value = fake_context_manager
 
-        instance = DataTableCreation()
+        instance = DataTableCreation(config_info=self.dbtable.config_info)
         instance.create_portfolio_analysis_tables(fake_engine)
 
         # --- Assertions ---
         # SQL script was opened with the expected file path and contents were read.
-        mock_file.assert_called_once_with('core/DataStorage/TableCreationSQL/PortfolioAnalysis/portfolio_data_warehouse.sql', 'r')
+        mock_file.assert_called_once_with(
+            'core/DataStorage/TableCreationSQL/PortfolioAnalysis/portfolio_data_warehouse.sql', 
+            'r',
+            encoding='utf-8'
+            )
         handle = mock_file()
         handle.read.assert_called_once()
         # The connection.execute method was called with a text clause containing the script.
@@ -184,8 +189,8 @@ class TestDBTableCreation(unittest.TestCase):
         fake_transact.commit.assert_called_once()
 
     @patch("src.DataStorage.Utils.table_creation.open", new_callable=mock_open, read_data="CREATE TABLE foo (id INTEGER);")
-    def test_error_during_execution(self):
-        """ This module tests the config_parser module """
+    def test_error_during_execution(self, mock_file): # pylint: disable = W0613
+        """This module tests the config_parser module."""
         # Set up a fake connection and transaction
         fake_transact = MagicMock()
         fake_conn = MagicMock()
@@ -200,7 +205,7 @@ class TestDBTableCreation(unittest.TestCase):
         fake_engine.connect.return_value = fake_context_manager
 
         # Prepare an instance with a fake logger
-        instance = DataTableCreation()
+        instance = DataTableCreation(self.dbtable.config_info)
         instance.logger = MagicMock()  # Patch the logger so we can verify logging
 
         # Call the method and verify it raises an exception

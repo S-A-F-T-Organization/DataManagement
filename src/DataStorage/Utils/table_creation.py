@@ -17,7 +17,7 @@ class DataTableCreation:
         - config_info (ConfigInfo): see above
         - sql_base_path (str): the base path to the folder where all of the SQL tables are stored
     """
-    def __init__(self, config_info = ConfigInfo):
+    def __init__(self, config_info:ConfigInfo):
         self.logger = dmh.setup_log_to_console()
         # Get config info
         self.config_info = config_info
@@ -139,7 +139,7 @@ class DataTableCreation:
         This creates the metadata tables for the security types specified by the user
 
         Args:
-        - mkt_data_engine (Engine): A SQLAlchemy engine for the specified database instane, created in the initalize_mkt_data_engine method
+        - mkt_data_engine (Engine): A SQLAlchemy engine for the database instance, created in the initalize_mkt_data_engine method
         """
         metadata_list = self.create_securities_metadata_list()
         with mkt_data_engine.connect() as conn:

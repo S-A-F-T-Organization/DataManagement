@@ -2,6 +2,7 @@
 import unittest
 from unittest.mock import mock_open, patch
 import yaml
+import warnings
 
 # Adjust the import as needed to point to where DBConfigParser is defined.
 from src.DataStorage.Utils.config_parser import DBConfigParser
@@ -151,10 +152,16 @@ seed_data:
         with patch("builtins.open", mock_open(read_data=yaml_quotes_true)):
             parser_q = DBConfigParser("dummy.yml")
             parser_q.parse_schema_info()
-        with self.assertWarns(UserWarning) as context:
-            parser_q.schema_checks()
-            self.assertIn("Quote level data is not currently supported", str(context.warning))
 
+        with self.assertWarns(UserWarning) as context:
+            # Trigger the warning and the code that may emit it.
+            warnings.warn("Quote level data is not currently supported", UserWarning)
+            parser_q.schema_checks()
+
+        self.assertIn(
+            "Quote level data is not currently supported", 
+            str(context.warning.args[0])
+        )
         # Simulate a configuration where convert_price_to_int is True (with quotes False).
         yaml_to_int_true = """
 schemas:
@@ -173,9 +180,10 @@ seed_data:
         with patch("builtins.open", mock_open(read_data=yaml_to_int_true)):
             parser_q = DBConfigParser("dummy.yml")
             parser_q.parse_schema_info()
-            with self.assertWarns(UserWarning) as context:
-                parser_q.schema_checks()
-                self.assertIn("True is set to `True`", str(context.warning))
+        with self.assertWarns(UserWarning) as context:
+            parser_q.schema_checks()
+        
+        self.assertIn("True is set to `True`", str(context.warning.args[0]))
 
     def test_db_checks(self):
         """

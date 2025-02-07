@@ -141,7 +141,7 @@ class DBConfigParser:
         """
         if self.config_info.db_dialect not in ["sqlite", "sqlite3"]:
             raise ValueError(
-                "We currently support SQLite, with PostgreSQL support coming soon!",
+                "We currently only offer support for SQLite with PostgreSQL support coming soon!",
                 "If you believe you configured for SQLite but are receiving this error, try either 'sqlite' or 'sqlite3'",
             )
 
