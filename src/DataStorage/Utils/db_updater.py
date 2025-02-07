@@ -17,10 +17,10 @@ class DBUpdater:
         """
         _summary_
         """
-        pass
+        return None
 
     def more_update(self):
         """
         _summary_
         """
-        pass
+        return None
