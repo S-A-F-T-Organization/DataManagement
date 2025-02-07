@@ -155,8 +155,7 @@ class DataTableCreation:
                     self.logger.error('Error creating the metadata tables for the historical prices', exc_info=True)
                     raise
         self.logger.info("Successfully initialized metadata tables...")
-        
-    
+
     def create_portfolio_analysis_tables(self, mkt_data_engine:Engine) -> None:
         """
         Creates all necessary tables for the portfolio analysis schema
