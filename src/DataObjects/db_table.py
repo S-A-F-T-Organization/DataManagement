@@ -11,7 +11,7 @@ from sqlalchemy import MetaData, Engine
 from sqlalchemy.schema import CreateTable
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
-import src.Utils.db_field as db_field
+import src.DataObjects.db_field as db_field
 
 Base = declarative_base()
 class SaftTable:
