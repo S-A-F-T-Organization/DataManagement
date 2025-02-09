@@ -5,7 +5,7 @@ import yaml
 import warnings
 
 # Adjust the import as needed to point to where DBConfigParser is defined.
-from src.DataStorage.Utils.config_parser import DBConfigParser
+from src.DataStorage.Utils.configurator import DBConfigParser
 
 
 class TestDBConfigParser(unittest.TestCase):

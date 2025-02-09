@@ -8,7 +8,7 @@ from sqlalchemy.engine import Engine
 from src.Utils.helpers import DataMgmtHelpers as dmh
 from src.DataStorage.Utils.table_creation import DataTableCreation
 from src.DataStorage.Utils.helpers import DataStorageHelpers as dsh
-from src.DataStorage.Utils.config_parser import ConfigInfo
+from src.DataStorage.Utils.configurator import ConfigInfo
 
 class TestDBTableCreation(unittest.TestCase):
     """
