@@ -15,8 +15,7 @@ The associated dataclasses and SQL table columns are:
 from typing import Tuple, Optional
 import logging
 from ib_insync import Contract
-from src.DataObjects.core_objects import SecuritiesInfo
-from src.BrokerageUtils.ibkr_utils import IBKRUtils as ibu
+from src.ibkr_utils import IBKRUtils as ibu
 
 # Enable logging if needed
 logging.basicConfig(level=logging.INFO)
