@@ -1,60 +1,188 @@
 """This module contains the CLI tool for implementing a SAFT DB schema"""
-from src.DataStorage.Utils.configurator import ConfigInfo
 
-def generate_config():
-    """
-    Prompts the user for various inputs related to the database setup and returns a config dict.
-    """
-    config_info = ConfigInfo()
+from typing import List, Callable, Any
 
-    # 1. SQL Dialect
-    sql_dialect = input("What SQL dialect will you be using? (current support: sqlite, postgresql): ")
-    config_info.db_dialect = sql_dialect.strip().lower()
-
-    # 2. DB Path
-    db_path = input("What is the path you would like to host this database at? (not including DB name): ")
-    config_info.db_path = db_path.strip()
-
-    # 3. DB Name
-    db_name = input("3. What would you like to name this database? (should end in .db): ")
-    config_info.db_name = db_name.strip()
-    config_info.db_path = f"{config_info.db_path}/{config_info.db_name}"
+from src.Utils.configurator import ConfigInfo
+from src.Utils.cli_checks import (
+    check_dialect,
+    check_db_path,
+    check_db_name,
+    check_security_types,
+    check_yes_or_no,
+)
 
 
-    # 4. Market Data Schema
-    enable_market_data = input("4. Would you like to implement our `market_data` schema? [Y/N]: ")
-    if enable_market_data.lower() == 'y':
-        config_info.market_data_flag = True
+class CLITool:
+    """Class representing the CLI tool for setting up a SAFT DB schema."""
 
+    def __init__(self):
+        self.config_info = ConfigInfo()
+        self.core_q_list = [
+            {
+                "q_text": "What SQL dialect will you be using? (current support: sqlite): ",
+                "cleaning_func": lambda s: s.lower().strip(),
+                "check_func": check_dialect,
+                "corresponding_attribute": "db_dialect",
+            },
+            {
+                "q_text": "What is the path you would like to host this database at? (not including DB name): ",
+                "cleaning_func": lambda s: s.strip(),
+                "check_func": check_db_path,
+                "corresponding_attribute": "db_path",
+            },
+            {
+                "q_text": "What would you like to name this database? (should end in .db): ",
+                "cleaning_func": lambda s: s,
+                "check_func": check_db_name,
+                "corresponding_attribute": "db_name",
+            },
+            {
+                "q_text": "Would you like to implement our `market_data` schema? [Y/N]: ",
+                "cleaning_func": lambda s: s.lower().strip(),
+                "check_func": check_yes_or_no,
+                "corresponding_attribute": "market_data_flag",
+            },
+            {
+                "q_text": "Would you like to implement our `portfolio_data` schema? [Y/N]: ",
+                "cleaning_func": lambda s: s.lower().strip(),
+                "check_func": check_yes_or_no,
+                "corresponding_attribute": "portfolio_data_flag",
+            },
+        ]
+    @property
+    def core_q_list(self):
+        """Sets the core questions for the CLI tool"""
+        core_q_list = [
+            {
+                "q_text": "What SQL dialect will you be using? (current support: sqlite): ",
+                "cleaning_func": lambda s: s.lower().strip(),
+                "check_func": check_dialect,
+                "corresponding_attribute": "db_dialect",
+            },
+            {
+                "q_text": "What is the path you would like to host this database at? (not including DB name): ",
+                "cleaning_func": lambda s: s.strip(),
+                "check_func": check_db_path,
+                "corresponding_attribute": "db_path",
+            },
+            {
+                "q_text": "What would you like to name this database? (should end in .db): ",
+                "cleaning_func": lambda s: s,
+                "check_func": check_db_name,
+                "corresponding_attribute": "db_name",
+            },
+            {
+                "q_text": "Would you like to implement our `market_data` schema? [Y/N]: ",
+                "cleaning_func": lambda s: s.lower().strip(),
+                "check_func": check_yes_or_no,
+                "corresponding_attribute": "market_data_flag",
+            },
+            {
+                "q_text": "Would you like to implement our `portfolio_data` schema? [Y/N]: ",
+                "cleaning_func": lambda s: s.lower().strip(),
+                "check_func": check_yes_or_no,
+                "corresponding_attribute": "portfolio_data_flag",
+            },
+        ]
+        return core_q_list
 
-    if config_info.market_data_flag:
-        store_prices_as_ints = input("Would you like to store historical security prices as integers? [Y/N]: ")
-        if store_prices_as_ints.lower() == 'y':
-            config_info.to_int_flag = True
+    @property
+    def mkt_data_q_list(self):
+        """Sets the questions for the market data schema"""
+        mkt_data_q_list = [
+            {
+                "q_text": "Would you like to store historical security prices as integers? [Y/N]: ",
+                "cleaning_func": lambda s: s.lower().strip(),
+                "check_func": check_yes_or_no,
+                "corresponding_attribute": "to_int_flag",
+            },
+            {
+                "q_text": "Would you like to store OHLCV data? [Y/N]: ",
+                "cleaning_func": lambda s: s.lower().strip(),
+                "check_func": check_yes_or_no,
+                "corresponding_attribute": "ohlcv_flag",
+            },
+            {
+                "q_text": "Of the following, which securities do you plan to track?" +
+                "[Stocks, ETFs, Forex, Futures, All] (comma-separated): ",
+                "cleaning_func": lambda securities_input: [sec.strip() for sec in securities_input.split(",")],
+                "check_func": check_security_types,
+                "corresponding_attribute": "seed_data",
+            }
+        ]
+        return mkt_data_q_list
 
-        store_ohlcv = input("Would you like to store OHLCV data? [Y/N]: ")
-        if store_ohlcv.lower() == 'y':
-            config_info.ohlcv_flag = True
+    def get_prev_q_index(self, current_q_index, current_group) -> tuple[int, List]:
+        """
+        If someone wants to go back to a previous question, then they can use ctrl+z
+        to undo. If they are not on the first question, this will return the index of the previous question
+        """
 
-        store_quote_level = input("Would you like to store quote level data? [Y/N]: ")
-        if store_quote_level.lower() == 'y':
-            config_info.quotes_flag = True
+        if (current_q_index >= 1) or (current_q_index > len(current_group) * -1):
+            prev_q_index = current_q_index - 1
+            return prev_q_index, current_group
+        print("There are no other previous questions")
+        return current_q_index, current_group
 
-        # Which securities to track
-        securities_input = input("Of the following, which securities do you plan to track?" +
-                                 "[Stocks, ETFs, Forex, Futures] (comma-separated): ")
-        securities_list = [sec.strip() for sec in securities_input.split(',')]
-        config_info.security_types = securities_list
+    def get_q_info(
+        self, q_group: List, q_index: int
+    ) -> tuple[str, Callable, Callable, Any]:
+        """
+        Gets all the information for a question in a group
+        """
+        q_info:dict = q_group[q_index]
+        q_text = q_info.get("q_text")
+        cleaning_func = q_info.get("cleaning_fun")
+        check_func = q_info.get("check_func")
+        corresponding_attribute = q_info.get("corresponding_attribute")
+        return q_text, cleaning_func, check_func, corresponding_attribute
 
-        # Which seed data to insert
-        seed_input = input("   Would you like to insert any of the seed data we offer?"
-                           "[Security Types, Exchanges, Futures, Forex, Stocks, ETFs] (comma-separated): ")
-        seed_data_list = [sd.strip() for sd in seed_input.split(',')]
-        config_info.seed_data = seed_data_list
+    def q_builder(self, q_index, q_group):
+        """
+        This sets the question text, gets the response as an input,
+        cleans the response, then sets the corresponding attribute.
+        """
+        q_text, cleaning_func, check_func, attr_name = self.get_q_info(q_group, q_index)
+        response: str = input(f"{q_text}: ")
 
-    # 5. Portfolio Data Schema
-    enable_portfolio_data = input("Would you like to implement our `portfolio_data` schema? [Y/N]: ")
-    if enable_portfolio_data.lower() == 'y':
-        config_info.portfolio_data_flag = True
+        # If the user hits ctrl+z
+        if response == "^Z":
+            q_index = self.get_prev_q_index(q_index, q_group)
+            return q_index, q_group
 
-    return config_info
+        clean_response = cleaning_func(response)
+
+        try:
+            updated_val = check_func(clean_response)
+            setattr(self.config_info, attr_name, clean_response)
+            q_index += 1
+            return q_index, q_group
+        except Warning as w:
+            print(w)
+            updated_val = "clean_response"+".db" ## This is a placeholder
+            setattr(self.config_info, attr_name, updated_val)
+            q_index += 1
+            return q_index, q_group
+        except ValueError as e:
+            print(e)
+            return q_index, q_group
+        except KeyboardInterrupt:
+            print("Keyboard interrupt occurred, closing CLI tool...")
+        except Exception as e:
+            print("Unexpected exception occurred, try again: %x", e)
+            return q_index, q_group
+
+    def generate_config_info(self):
+        """
+        This function will generate the config info for the user
+        """
+        # Core questions
+        q_index = 0
+        while q_index < len(self.core_q_list):
+            q_index = self.q_builder(q_index, self.core_q_list)
+
+        # Market data questions
+        if self.config_info.market_data_flag:
+            q_index = 0
+            while q_index < len(self.mkt_data_q_list):
+                self.q_builder(q_index, self.core_q_list)

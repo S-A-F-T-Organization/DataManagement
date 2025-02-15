@@ -3,7 +3,7 @@ from typing import List
 import os
 from sqlalchemy import text
 from src.Utils import helpers
-from src.DataStorage.Utils.configurator import ConfigInfo
+from src.Utils.configurator import ConfigInfo
 
 class DBFromConfig:
     """
@@ -19,7 +19,9 @@ class DBFromConfig:
     def __init__(self, config_info:ConfigInfo):
         self.logger = helpers.setup_log_to_console()
         # Get config info
-        self.config_info = config_info.clean_config()
+        self.config_info = config_info
+        if self.config_info.security_types == ["ALL"]:
+            self.config_info.security_types = ["STK", "ETF", "FUT", "FOREX"]
         # Base path for SQL scripts
         self.sql_base_path = 'src/DataStorage/SQLTables'
         self.underlying_flag = False
