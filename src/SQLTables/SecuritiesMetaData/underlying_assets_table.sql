@@ -1,4 +1,5 @@
 CREATE TABLE IF NOT EXISTS UnderlyingAssetTypes(
-    [UnderlyingAssetTypeID] INTEGER PRIMARY KEY,
-    [UnderlyingAssetType] TEXT NOT NULL
+    [underlying_asset_type_id] INTEGER PRIMARY KEY,
+    [underlying_asset_type] TEXT NOT NULL,
+    UNIQUE (underlying_asset_type)
 )

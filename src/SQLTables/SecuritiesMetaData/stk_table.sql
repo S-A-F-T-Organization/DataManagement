@@ -1,30 +1,17 @@
-CREATE TABLE IF NOT EXISTS StockSectors (
-    [SectorID] INTEGER PRIMARY KEY,
-    [SectorName] TEXT,
-    UNIQUE (SectorName)
-)
-
-CREATE TABLE IF NOT EXISTS StockIndustries (
-    [IndustryID] INTEGER PRIMARY KEY,
-    [IndustryName] TEXT,
-    UNIQUE (IndustryName)
-)
-
 CREATE TABLE IF NOT EXISTS StockMetadata (
-    [SymbolID] INTEGER PRIMARY KEY,
-    [FullName] TEXT,
-    [SPComponent] INTEGER,
-    [NQComponent] INTEGER,
-    [DJComponent] INTEGER,
-    [RTYComponent] INTEGER,
-    [VIXComponent] INTEGER,
-    [SectorID] INTEGER,
-    [IndustryID] INTEGER,
-    [IPODate] TEXT,
-    FOREIGN KEY (SymbolID)
-        REFERENCES SecuritiesInfo(SymbolID),
-    FOREIGN KEY (SectorID)
-        REFERENCES StockSectors(SectorID),
-    FOREIGN KEY (IndustryID)
-        REFERENCES StockIndustries(IndustryID)
-)
+    symbol_id INTEGER PRIMARY KEY,
+    full_name TEXT,
+    sp_component INTEGER,
+    nq_component INTEGER,
+    djia_component INTEGER,
+    rty_component INTEGER,
+    sector_id INTEGER,
+    industry_id INTEGER,
+    ipo_date_utc_sec INTEGER,
+    FOREIGN KEY (symbol_id)
+        REFERENCES SecuritiesInfo(symbol_id),
+    FOREIGN KEY (sector_id)
+        REFERENCES SectorInfo(sector_id),
+    FOREIGN KEY (industry_id)
+        REFERENCES IndustryInfo(industry_id)
+);
