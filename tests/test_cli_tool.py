@@ -84,7 +84,7 @@ class TestCLITool(unittest.TestCase):
         # Test the securities cleaning function
         securities_cleaning = questions[3]["cleaning_func"]
         self.assertEqual(
-            securities_cleaning("Stocks, ETFs, Forex"), ["Stocks", "ETFs", "Forex"]
+            securities_cleaning("Stocks, ETFs, Forex"), ["stocks", "etfs", "forex"]
         )
 
     def test_quotes_questions(self):
@@ -182,7 +182,7 @@ class TestCLITool(unittest.TestCase):
             {
                 "q_text": "What SQL dialect?",
                 "cleaning_func": lambda s: s.strip(),
-                "check_func": lambda x: None,  # Mock check function that always succeeds
+                "check_func": lambda x: x,  # Mock check function that always succeeds
                 "corresponding_attribute": "db_dialect",
             }
         ]

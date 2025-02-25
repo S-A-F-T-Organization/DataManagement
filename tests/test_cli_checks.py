@@ -88,7 +88,7 @@ class TestCheckDbName(unittest.TestCase):
     def test_valid_db_name(self):
         """Test with valid database name ending with .db."""
         # Should not modify the name and return None
-        self.assertIsNone(check_db_name("database.db"))
+        self.assertIsInstance(check_db_name("database.db"), str)
 
     def test_db_name_without_extension(self):
         """Test with database name without .db extension."""

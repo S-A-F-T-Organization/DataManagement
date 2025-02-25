@@ -1,4 +1,4 @@
-CREATE OR ALTER TABLE InferenceSteps(
+CREATE TABLE IF NOT EXISTS InferenceSteps(
     [inference_step_id] INTEGER PRIMARY KEY,
     [module_id] INTEGER NOT NULL,
     [step_name] TEXT NOT NULL,

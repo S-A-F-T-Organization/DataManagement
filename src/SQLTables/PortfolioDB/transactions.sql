@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS Transactions(
     [transaction_id] INTEGER PRIMARY KEY,
-    [account-id] INTEGER,
+    [account_id] INTEGER,
     [transaction_type_id] INTEGER,
     [transaction_timestamp_utc_ms] INTEGER,
     [transaction_value] REAL,

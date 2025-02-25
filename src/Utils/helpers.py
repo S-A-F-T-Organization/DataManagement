@@ -16,7 +16,7 @@ def setup_log_to_console() -> logging.Logger:
     return logger
 
 
-def initalize_db_engine(db_dialect:str, db_path:str) -> Engine:
+def initalize_db_engine(db_dialect:str, db_path:str, db_name) -> Engine:
     """
     This creates an SQLAlchemy engine to manage the database transactions/connection
 
@@ -26,11 +26,11 @@ def initalize_db_engine(db_dialect:str, db_path:str) -> Engine:
     logger = setup_log_to_console()
     try:
         if db_dialect in ("sqlite3", "sqlite") and not db_path.startswith('sqlite:///'):
-            engine_path = 'sqlite:///' + db_path
+            engine_path = 'sqlite:///' + db_path + '/' + db_name
         elif db_dialect in ("sqlite3", "sqlite") and db_path.startswith('sqlite:///'):
             engine_path = db_path
         else:
-            raise ValueError("Invalid database dialect detected")
+            raise ValueError("Invalid database dialect detected: " + db_dialect)
         db_engine = create_engine(engine_path)
         return db_engine
     except Exception:
@@ -54,7 +54,7 @@ def create_table(db_engine:Engine, full_path:str) -> None:
                 conn.execute(text(sql_script))
         except Exception:
             transact.rollback()
-            logger.error('Error creating the metadata tables for the historical prices', exc_info=True)
+            logger.error('Error creating tables', exc_info=True)
             raise
         transact.commit()
     

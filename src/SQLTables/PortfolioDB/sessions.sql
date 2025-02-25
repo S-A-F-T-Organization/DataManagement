@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS SessionTable(
-    [SessionID] INTEGER PRIMARY KEY,
-    [DatetimeCreated] INTEGER,
+    [session_id] INTEGER PRIMARY KEY,
+    [created_timestamp_utc_ms] INTEGER,
     [DatetimeEnded] INTEGER,
     [DataReaderStartDatetime] INTEGER
 )

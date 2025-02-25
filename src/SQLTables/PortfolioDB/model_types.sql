@@ -1,4 +1,4 @@
-CREATE OR ALTER TABLE ModelTypes (
+CREATE TABLE IF NOT EXISTS ModelTypes (
     model_type_id INTEGER PRIMARY KEY,
     model_type TEXT NOT NULL,
     model_library_id INTEGER NOT NULL,

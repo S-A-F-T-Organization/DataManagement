@@ -14,5 +14,3 @@ CREATE TABLE SecurityPricesMBPFull (
     [best_ask_ct]    INTEGER NOT NULL,
     FOREIGN KEY (symbol_id) REFERENCES SecuritiesInfo(symbol_id)
 );
-
-CREATE INDEX idx_SecurityPricesMBPFull_symbol_timestamp ON SecurityPricesMBPFull (symbol_id, timestamp_utc_ms);

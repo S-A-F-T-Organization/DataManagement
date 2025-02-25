@@ -1,4 +1,4 @@
-CREATE OR ALTER TABLE inference_times (
+CREATE TABLE IF NOT EXISTS inference_times (
     [inference_step_timing_id] INTEGER NOT NULL PRIMARY KEY,
     [inference_id] INTEGER NOT NULL,
     [inference_step_id] INTEGER NOT NULL,

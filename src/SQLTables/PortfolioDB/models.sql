@@ -1,4 +1,4 @@
-CREATE OR ALTER TABLE Models (
+CREATE TABLE IF NOT EXISTS Models (
     [model_id] INTEGER PRIMARY KEY,
     [strategy_id] INTEGER NOT NULL,
     [model_name] TEXT NOT NULL,

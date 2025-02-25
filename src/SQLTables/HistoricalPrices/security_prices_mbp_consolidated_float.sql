@@ -11,5 +11,3 @@ CREATE TABLE SecurityPricesMBPConsolidated (
     best_ask_ct INTEGER NOT NULL,
     FOREIGN KEY (symbol_id) REFERENCES SecuritiesInfo(symbol_id)
 );
-
-CREATE INDEX idx_SecurityPricesMBPConsolidated_symbol_timestamp ON SecurityPricesMBPConsolidated (symbol_id, timestamp_utc_ms);

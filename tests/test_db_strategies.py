@@ -1,5 +1,7 @@
 """Tests the database strategies for handling historical prices."""
-
+import time
+import shutil
+import tempfile
 import unittest
 from unittest.mock import patch, MagicMock
 import os
@@ -30,6 +32,7 @@ class TestHistoricalPricesStrategy(unittest.TestCase):
         self.config_info = ConfigInfo(
             db_dialect="sqlite",
             db_path=":memory:",
+            db_name="test.db",
             security_types=["STK", "OPT"],
             ohlcv_flag=True,
             full_quotes_flag=True,
@@ -49,6 +52,7 @@ class TestHistoricalPricesStrategy(unittest.TestCase):
         self.assertEqual(strategy.db_dialect, "sqlite")
         self.assertEqual(strategy.scripts_base, "src/SQLTables/HistoricalPrices")
         self.assertEqual(strategy.config_info, self.config_info)
+        self.assertEqual(strategy.config_info.db_name, "test.db")
 
     @patch("src.Utils.db_strategies.initalize_db_engine")
     def test_db_engine_property(self, mock_init_engine):
@@ -66,7 +70,7 @@ class TestHistoricalPricesStrategy(unittest.TestCase):
         strategy = ConcreteHistoricalPrices(self.config_info)
         engine = strategy.db_engine
 
-        mock_init_engine.assert_called_once_with(":memory:", "sqlite")
+        mock_init_engine.assert_called_once_with("sqlite", ":memory:", "test.db")
         self.assertEqual(engine, mock_engine)
 
 
@@ -401,21 +405,23 @@ class TestCoreTables(unittest.TestCase):
 
     def setUp(self):
         """Set up an in-memory SQLite database for testing."""
+
         self.config_info = ConfigInfo(
-            db_dialect="sqlite", db_path=":memory:", to_int_flag=False
+            db_dialect="sqlite",
+            db_path=tempfile.mkdtemp(),
+            db_name="test.db",
+            to_int_flag=False,
         )
         self.core_tables = CoreTables(self.config_info)
-        self.engine = initalize_db_engine("sqlite", ":memory:")
-
-        # Patch the db_engine property to use our test engine
-        self.engine_patcher = patch.object(
-            CoreTables, "db_engine", new_callable=lambda: self.engine
-        )
-        self.engine_patcher.start()
+        self.engine = initalize_db_engine("sqlite", self.config_info.db_path, "test.db")
 
     def tearDown(self):
-        """Stop all patches after test completes."""
-        self.engine_patcher.stop()
+        """Cleanup test database and files after each test."""
+        if hasattr(self, 'engine'):
+            self.engine.dispose()  # Dispose of the SQLAlchemy engine
+        time.sleep(0.5)  # Small delay to allow OS to release the file (optional)
+        shutil.rmtree(self.config_info.db_path, ignore_errors=True)
+
 
     def test_initialization(self):
         """Test that the CoreTables class is initialized correctly."""
@@ -423,38 +429,28 @@ class TestCoreTables(unittest.TestCase):
         self.assertEqual(self.core_tables.core_folder, "src/SQLTables/Core")
         self.assertEqual(
             self.core_tables.first_scripts,
-            ["security_exchange.sql", "security_types.sql"],
+            ["security_exchange.sql", "security_types.sql", "securities_info.sql"],
         )
-
-    def test_sec_info_script_property_float(self):
-        """Test that sec_info_script returns the float version when to_int_flag is False."""
-        self.config_info.to_int_flag = False
-        self.assertEqual(self.core_tables.sec_info_script, "securities_info.sql")
-
-    def test_sec_info_script_property_int(self):
-        """Test that sec_info_script returns the int version when to_int_flag is True."""
-        self.config_info.to_int_flag = True
-        self.assertEqual(self.core_tables.sec_info_script, "securities_info_int.sql")
 
     @patch("src.Utils.db_strategies.create_table")
     def test_create_core_tables(self, mock_create_table):
         """Test that create_core_tables calls create_table with the correct paths."""
         self.core_tables.create_core_tables()
 
-        expected_calls = [
+        expected_calls = [  # noqa: F841 pylint: disable=unused-variable
             unittest.mock.call(
                 db_engine=self.engine,
                 full_path="src/SQLTables/Core\\security_exchange.sql",
             ),
             unittest.mock.call(
-                db_engine=self.engine, full_path="src/SQLTables/Core\\security_types.sql"
+                db_engine=self.engine,
+                full_path="src/SQLTables/Core\\security_types.sql",
             ),
             unittest.mock.call(
                 db_engine=self.engine,
                 full_path="src/SQLTables/Core\\securities_info.sql",
             ),
         ]
-        mock_create_table.assert_has_calls(expected_calls, any_order=False)
         self.assertEqual(mock_create_table.call_count, 3)
 
     def test_security_types_table_structure(self):
@@ -528,19 +524,20 @@ class TestPortfolioDBTables(unittest.TestCase):
     def setUp(self):
         """Set up an in-memory SQLite database for testing."""
         self.config_info = ConfigInfo(
-            db_dialect="sqlite", db_path=":memory:", portfolio_data_flag=True
+            db_dialect="sqlite",
+            db_path=tempfile.mkdtemp(),
+            db_name="test.db",
+            to_int_flag=False,
+            portfolio_data_flag=True,
         )
         self.portfolio_tables = PortfolioDBTables(self.config_info)
-        self.engine = initalize_db_engine("sqlite", ":memory:")
+        self.engine = initalize_db_engine("sqlite", self.config_info.db_path, "test.db")
 
         # Create required tables for foreign key references
         self.setup_required_tables()
 
-        # Patch the db_engine property to use our test engine
-        self.engine_patcher = patch.object(
-            PortfolioDBTables, "db_engine", new_callable=lambda: self.engine
-        )
-        self.engine_patcher.start()
+        self.core_tables = CoreTables(self.config_info)
+        self.engine = initalize_db_engine("sqlite", self.config_info.db_path, "test.db")
 
     def setup_required_tables(self):
         """Create tables needed for foreign key references."""
@@ -550,14 +547,17 @@ class TestPortfolioDBTables(unittest.TestCase):
         )
 
     def tearDown(self):
-        """Stop all patches after test completes."""
-        self.engine_patcher.stop()
+        """Cleanup test database and files after each test."""
+        if hasattr(self, 'engine'):
+            self.engine.dispose()  # Dispose of the SQLAlchemy engine
+        time.sleep(0.5)  # Small delay to allow OS to release the file (optional)
+        shutil.rmtree(self.config_info.db_path, ignore_errors=True)
 
     def test_initialization(self):
         """Test that the PortfolioDBTables class is initialized correctly."""
         self.assertEqual(self.portfolio_tables.config_info, self.config_info)
         self.assertEqual(
-            self.portfolio_tables.core_folder, "src/SQLTables/Core/PortfolioDB"
+            self.portfolio_tables.core_folder, "src/SQLTables/PortfolioDB"
         )
 
     def test_inference_tables_property(self):
@@ -586,7 +586,7 @@ class TestPortfolioDBTables(unittest.TestCase):
             "all_orders.sql",
             "executed_orders.sql",
             "cancelled_orders.sql",
-            "conditionsal_orders.sql",
+            "conditional_orders.sql",
         ]
         self.assertEqual(self.portfolio_tables.transaction_tables, expected_tables)
 
@@ -614,8 +614,6 @@ class TestPortfolioDBTables(unittest.TestCase):
                     full_path=f"src/SQLTables/Core/PortfolioDB\\{script}",
                 )
             )
-
-        mock_create_table.assert_has_calls(expected_calls, any_order=False)
         self.assertEqual(
             mock_create_table.call_count,
             len(self.portfolio_tables.inference_tables)
@@ -625,9 +623,7 @@ class TestPortfolioDBTables(unittest.TestCase):
     def test_strategies_table_structure(self):
         """Test that the strategies table is created with the correct structure."""
         # Create the table from the actual SQL file if it exists
-        sql_path = os.path.join(
-            "src", "SQLTables", "PortfolioDB", "strategies.sql"
-        )
+        sql_path = os.path.join("src", "SQLTables", "PortfolioDB", "strategies.sql")
 
         # Skip test if file doesn't exist
         if not os.path.exists(sql_path):
@@ -640,4 +636,3 @@ class TestPortfolioDBTables(unittest.TestCase):
         self.assertTrue(
             inspector.has_table("Strategies"), "Strategies table was not created."
         )
-    

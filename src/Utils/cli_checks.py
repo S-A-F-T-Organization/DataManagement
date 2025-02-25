@@ -19,6 +19,7 @@ def check_dialect(response: str) -> None:
             "We currently only offer support for SQLite (try 'sqlite' or 'sqlite3'). "
             "PostgreSQL support is coming soon!"
         )
+    return response
 
 
 def check_db_path(response: str) -> None:
@@ -52,6 +53,7 @@ def check_db_path(response: str) -> None:
         raise ValueError(
             "Invalid database path, path should not end in a slash. Please try again."
         )
+    return response
 
 def check_db_name(response: str) -> Union[str, None]:
     """Check if the database name is valid
@@ -83,7 +85,7 @@ def check_db_name(response: str) -> Union[str, None]:
             "Database name should end in .db. This has been automatically appended to the name."
         )
         return db_name
-    return None
+    return response
 
 
 def check_yes_or_no(response: str) -> None:
@@ -100,6 +102,9 @@ def check_yes_or_no(response: str) -> None:
     """
     if response not in ["Y", "N", "y", "n"]:
         raise ValueError("Invalid response. Please enter 'Y' or 'N'.")
+    if response in ["Y", "y"]:
+        return True
+    return False
 
 
 def check_security_types(response: list[str]) -> None:
@@ -120,7 +125,7 @@ def check_security_types(response: list[str]) -> None:
             raise ValueError(
                 f"Unrecognized security type '{sec_type}'. Supported types: {supported_sec_types}"
             )
-
+    return response
 
 def check_quotes_type(response: str):
     """
@@ -138,3 +143,4 @@ def check_quotes_type(response: str):
         raise ValueError(
             f"Unrecognized quotes type '{response}'. Supported types: {supported_quotes_types}"
         )
+    return response

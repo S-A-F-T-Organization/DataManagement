@@ -1,3 +1,4 @@
+"""Strategy classes for setting up the databases"""
 import os
 from abc import ABC, abstractmethod
 from typing import List
@@ -21,7 +22,11 @@ class HistoricalPricesStrategy(ABC):
     @property
     def db_engine(self) -> Engine:
         """The SQLAlchemy engine for the database."""
-        db_engine = initalize_db_engine(self.db_path, self.db_dialect)
+        db_engine = initalize_db_engine(
+            self.db_dialect, 
+            self.db_path, 
+            self.config_info.db_name
+        )
         return db_engine
 
     @abstractmethod
@@ -45,11 +50,14 @@ class MetadataStrategies(ABC):
         self.db_dialect = config_info.db_dialect
         self.security_types = config_info.security_types
         self.scripts_base = "src/SQLTables/SecuritiesMetadata"
+        self.config_info = config_info
 
     @property
     def db_engine(self) -> Engine:
         """The SQLAlchemy engine for the database."""
-        db_engine = initalize_db_engine(self.db_path, self.db_dialect)
+        db_engine = initalize_db_engine(
+            self.db_path, self.db_dialect, self.config_info.db_name
+        )
         return db_engine
 
     @abstractmethod
@@ -90,6 +98,7 @@ class ToIntStrategy(HistoricalPricesStrategy):
             else:
                 tables.append("security_prices_mbp_consolidated_int.sql")
         return tables
+
 
 class RealStrategy(HistoricalPricesStrategy):
     """This strategy creates the historical prices tables for the database"""
@@ -179,22 +188,17 @@ class CoreTables:
     def __init__(self, config_info: ConfigInfo):
         self.config_info = config_info
         self.core_folder = "src/SQLTables/Core"
-        self.first_scripts = ["security_exchange.sql", "security_types.sql"]
+        self.first_scripts = ["security_exchange.sql", "security_types.sql", "securities_info.sql"]
 
     @property
     def db_engine(self) -> Engine:
         """The SQLAlchemy engine for the database."""
         db_engine = initalize_db_engine(
-            self.config_info.db_path, self.config_info.db_dialect
+            self.config_info.db_dialect,
+            self.config_info.db_path,
+            self.config_info.db_name,
         )
         return db_engine
-
-    @property
-    def sec_info_script(self) -> str:
-        """This gets the script to create the SecuritiesInfo table."""
-        if self.config_info.to_int_flag:
-            return "securities_info_int.sql"
-        return "securities_info.sql"
 
     def create_core_tables(self) -> None:
         """Creates the core tables."""
@@ -203,22 +207,21 @@ class CoreTables:
             full_path = os.path.join(self.core_folder, script)
             create_table(db_engine=self.db_engine, full_path=full_path)
 
-        full_sec_info = os.path.join(self.core_folder, self.sec_info_script)
-        create_table(db_engine=self.db_engine, full_path=full_sec_info)
-
 
 class PortfolioDBTables:
     """Creates the portfolio database tables according to users preferences."""
 
     def __init__(self, config_info: ConfigInfo):
         self.config_info = config_info
-        self.core_folder = "src/SQLTables/Core/PortfolioDB"
+        self.core_folder = "src/SQLTables/PortfolioDB"
 
     @property
     def db_engine(self) -> Engine:
         """The SQLAlchemy engine for the database."""
         db_engine = initalize_db_engine(
-            self.config_info.db_path, self.config_info.db_dialect
+            self.config_info.db_dialect,
+            self.config_info.db_path,
+            self.config_info.db_name,
         )
         return db_engine
 
@@ -249,7 +252,7 @@ class PortfolioDBTables:
             "all_orders.sql",
             "executed_orders.sql",
             "cancelled_orders.sql",
-            "conditionsal_orders.sql",
+            "conditional_orders.sql",
         ]
 
     def create_portfolio_tables(self) -> None:
