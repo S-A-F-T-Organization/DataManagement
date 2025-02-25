@@ -2,10 +2,8 @@
 from src.Utils import cli_tool
 from src.Utils import db_from_config
 
-def setup_saft_db():
-    """Creates a new database using a SAFT schema through the CLI"""
-    config_file = cli_tool.generate_config()
-    db_from_config.DBFromConfig(config_file).initialize_db()
-
 if __name__ == "__main__":
-    setup_saft_db()
+    cli_tool = cli_tool.CLITool()
+    config_info = cli_tool.generate_config_info()
+    db_creator = db_from_config.DBFromConfig(config_info)
+    db_creator.create_config_tables()

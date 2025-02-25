@@ -1,4 +1,4 @@
-CREATE OR ALTER TABLE MutualFundSnapshots (
+CREATE TABLE IF NOT EXISTS MutualFundSnapshots (
     [snapshot_id] INT PRIMARY KEY,
     [nav] REAL NOT NULL,
     [expense_ratio] REAL NOT NULL,

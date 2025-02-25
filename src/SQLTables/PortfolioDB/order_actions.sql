@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS OrderActions (
-    [action_id] INTEGER PRIMARY,
-    [action_name] TEXT,
-    UNIQUE (action_name)
+    [order_action_id] INTEGER PRIMARY,
+    [order_action] TEXT,
+    UNIQUE (order_action)
 )

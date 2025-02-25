@@ -2,13 +2,14 @@
 
 from typing import List, Callable, Any
 
-from src.Utils.configurator import ConfigInfo
+from src.Utils.config_info import ConfigInfo
 from src.Utils.cli_checks import (
     check_dialect,
     check_db_path,
     check_db_name,
     check_security_types,
     check_yes_or_no,
+    check_quotes_type
 )
 
 
@@ -17,42 +18,11 @@ class CLITool:
 
     def __init__(self):
         self.config_info = ConfigInfo()
-        self.core_q_list = [
-            {
-                "q_text": "What SQL dialect will you be using? (current support: sqlite): ",
-                "cleaning_func": lambda s: s.lower().strip(),
-                "check_func": check_dialect,
-                "corresponding_attribute": "db_dialect",
-            },
-            {
-                "q_text": "What is the path you would like to host this database at? (not including DB name): ",
-                "cleaning_func": lambda s: s.strip(),
-                "check_func": check_db_path,
-                "corresponding_attribute": "db_path",
-            },
-            {
-                "q_text": "What would you like to name this database? (should end in .db): ",
-                "cleaning_func": lambda s: s,
-                "check_func": check_db_name,
-                "corresponding_attribute": "db_name",
-            },
-            {
-                "q_text": "Would you like to implement our `market_data` schema? [Y/N]: ",
-                "cleaning_func": lambda s: s.lower().strip(),
-                "check_func": check_yes_or_no,
-                "corresponding_attribute": "market_data_flag",
-            },
-            {
-                "q_text": "Would you like to implement our `portfolio_data` schema? [Y/N]: ",
-                "cleaning_func": lambda s: s.lower().strip(),
-                "check_func": check_yes_or_no,
-                "corresponding_attribute": "portfolio_data_flag",
-            },
-        ]
+
     @property
-    def core_q_list(self):
-        """Sets the core questions for the CLI tool"""
-        core_q_list = [
+    def sql_info_questions(self) -> List[dict]:
+        """Returns a list of SQL dialects supported by the CLI tool"""
+        sql_info_list = [
             {
                 "q_text": "What SQL dialect will you be using? (current support: sqlite): ",
                 "cleaning_func": lambda s: s.lower().strip(),
@@ -70,7 +40,14 @@ class CLITool:
                 "cleaning_func": lambda s: s,
                 "check_func": check_db_name,
                 "corresponding_attribute": "db_name",
-            },
+            }]
+        return sql_info_list
+    
+    @property
+    def initial_flags_questions(self) -> List[dict]:
+        """Returns a list of initial flags for the CLI tool"""
+        initial_flags_list = [
+            ## Initial Schema Questions ##
             {
                 "q_text": "Would you like to implement our `market_data` schema? [Y/N]: ",
                 "cleaning_func": lambda s: s.lower().strip(),
@@ -82,9 +59,9 @@ class CLITool:
                 "cleaning_func": lambda s: s.lower().strip(),
                 "check_func": check_yes_or_no,
                 "corresponding_attribute": "portfolio_data_flag",
-            },
+            }
         ]
-        return core_q_list
+        return initial_flags_list
 
     @property
     def mkt_data_q_list(self):
@@ -103,6 +80,12 @@ class CLITool:
                 "corresponding_attribute": "ohlcv_flag",
             },
             {
+                "q_text": "Would you like to store Quotes data? [Y/N]: ",
+                "cleaning_func": lambda s: s.lower().strip(),
+                "check_func": check_yes_or_no,
+                "corresponding_attribute": "quotes_flag",
+            },
+            {
                 "q_text": "Of the following, which securities do you plan to track?" +
                 "[Stocks, ETFs, Forex, Futures, All] (comma-separated): ",
                 "cleaning_func": lambda securities_input: [sec.strip() for sec in securities_input.split(",")],
@@ -111,6 +94,19 @@ class CLITool:
             }
         ]
         return mkt_data_q_list
+    
+    @property
+    def quotes_questions(self):
+        """Sets the questions for the quotes data"""
+        quotes_questions = [
+            {
+                "q_text": "Would you like to store full quotes or consolidated? ['Full'/'Consolidated']: ",
+                "cleaning_func": lambda s: s.lower().strip(),
+                "check_func": check_quotes_type,
+                "corresponding_attribute": "full_quotes_flag",
+            }
+        ]
+        return quotes_questions
 
     def get_prev_q_index(self, current_q_index, current_group) -> tuple[int, List]:
         """
@@ -172,17 +168,28 @@ class CLITool:
             print("Unexpected exception occurred, try again: %x", e)
             return q_index, q_group
 
-    def generate_config_info(self):
+    def generate_config_info(self) -> ConfigInfo:
         """
         This function will generate the config info for the user
         """
-        # Core questions
+        # SQL questions
         q_index = 0
-        while q_index < len(self.core_q_list):
-            q_index = self.q_builder(q_index, self.core_q_list)
+        while q_index < len(self.sql_info_questions):
+            q_index = self.q_builder(q_index, self.sql_info_questions)
 
-        # Market data questions
+        # Initial Flags Questions
+        q_index = 0
+        while q_index < len(self.initial_flags_questions):
+            q_index = self.q_builder(q_index, self.initial_flags_questions)
+        # Market Data Questions
         if self.config_info.market_data_flag:
             q_index = 0
             while q_index < len(self.mkt_data_q_list):
-                self.q_builder(q_index, self.core_q_list)
+                self.q_builder(q_index, self.mkt_data_q_list)
+        
+        # Quotes Questions
+        if self.config_info.quotes_flag:
+            q_index = 0
+            while q_index < len(self.quotes_questions):
+                self.q_builder(q_index, self.quotes_questions)
+        return self.config_info

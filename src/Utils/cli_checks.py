@@ -1,6 +1,6 @@
 """This module contains all of the functions for checking the configuration info."""
 
-from src.Utils.configurator import ConfigInfo
+from src.Utils.config_info import ConfigInfo
 
 
 def check_dialect(config_info: ConfigInfo) -> None:
@@ -119,3 +119,21 @@ def check_security_types(config_info: ConfigInfo) -> None:
             raise ValueError(
                 f"Unrecognized security type '{sec_type}'. Supported types: {supported_sec_types}"
             )
+
+
+def check_quotes_type(response: str):
+    """
+    Check if the quotes type is valid.
+    Supported quotes types: ['quotes', 'full_quotes']
+
+    Args:
+        config_info (ConfigInfo): The configuration info object.
+
+    Raises:
+        ValueError: If the quotes type is not supported.
+    """
+    supported_quotes_types = ["full", "consolidated"]
+    if response not in supported_quotes_types:
+        raise ValueError(
+            f"Unrecognized quotes type '{response}'. Supported types: {supported_quotes_types}"
+        )
