@@ -1,9 +1,9 @@
 """This module contains all of the functions for checking the configuration info."""
 
-from src.Utils.config_info import ConfigInfo
+import warnings
+from typing import Union
 
-
-def check_dialect(config_info: ConfigInfo) -> None:
+def check_dialect(response: str) -> None:
     """
     Check if the SQL dialect is valid.
 
@@ -13,7 +13,7 @@ def check_dialect(config_info: ConfigInfo) -> None:
     Raises:
         ValueError: If the dialect is not supported.
     """
-    if config_info.db_dialect not in ["sqlite", "sqlite3"]:
+    if response not in ["sqlite", "sqlite3"]:
         raise ValueError(
             "Invalid SQL dialect. Please try again."
             "We currently only offer support for SQLite (try 'sqlite' or 'sqlite3'). "
@@ -21,7 +21,7 @@ def check_dialect(config_info: ConfigInfo) -> None:
         )
 
 
-def check_db_path(config_info: ConfigInfo) -> None:
+def check_db_path(response: str) -> None:
     """
     Check if the database path is valid. A valid path:
     1. cannot be empty
@@ -36,25 +36,24 @@ def check_db_path(config_info: ConfigInfo) -> None:
     Raises:
         ValueError: If path is not valid
     """
-    if not config_info.db_path:
+    if not isinstance(response, str):
+        raise ValueError(
+            f"Invalid database path, expected a string but received response of type {type(response)}. Please try again."
+        )
+    if not response:
         raise ValueError(
             "Invalid database path, expected a string but received None. Please try again."
         )
-    if config_info.db_path.endswith(".db"):
+    if response.endswith(".db"):
         raise ValueError(
             "Invalid database path, path should not end in .db. Please try again."
         )
-    if config_info.db_path.endswith("/"):
+    if response.endswith("/"):
         raise ValueError(
             "Invalid database path, path should not end in a slash. Please try again."
         )
-    if not isinstance(config_info.db_path, str):
-        raise ValueError(
-            f"Invalid database path, expected a string but received response of type {type(config_info.db_path)}. Please try again."
-        )
 
-
-def check_db_name(config_info: ConfigInfo) -> None:
+def check_db_name(response: str) -> Union[str, None]:
     """Check if the database name is valid
     1. cannot be empty
     2. cannot be None
@@ -70,19 +69,21 @@ def check_db_name(config_info: ConfigInfo) -> None:
         ValueError: If name is not a string
         ValueError: If name is empty
     """
-    if not config_info.db_name:
+    if not response:
         raise ValueError(
             "Invalid database name, expected a string but received None. Please try again."
         )
-    if not config_info.db_name.endswith(".db"):
-        config_info.db_name += ".db"
-        raise Warning(
+    if not isinstance(response, str):
+        raise ValueError(
+            f"Invalid database name, expected a string but received response of type {type(response)}. Please try again."
+        )
+    if not response.endswith(".db"):
+        db_name = response + ".db"
+        warnings.warn(
             "Database name should end in .db. This has been automatically appended to the name."
         )
-    if not isinstance(config_info.db_name, str):
-        raise ValueError(
-            f"Invalid database name, expected a string but received response of type {type(config_info.db_path)}. Please try again."
-        )
+        return db_name
+    return None
 
 
 def check_yes_or_no(response: str) -> None:
@@ -101,7 +102,7 @@ def check_yes_or_no(response: str) -> None:
         raise ValueError("Invalid response. Please enter 'Y' or 'N'.")
 
 
-def check_security_types(config_info: ConfigInfo) -> None:
+def check_security_types(response: list[str]) -> None:
     """
     Check if the security types are valid.
     Supported security types: ['Stocks', 'ETFs', 'Forex', 'Futures']
@@ -112,9 +113,9 @@ def check_security_types(config_info: ConfigInfo) -> None:
     Raises:
         ValueError: If the security type is not supported.
     """
-    supported_sec_types = ["stocks", "etfs", "forex", "futures", "all"]
+    supported_sec_types = ["stocks", "etfs", "forex", "futures", "fund", "all"]
 
-    for sec_type in config_info.security_types:
+    for sec_type in response:
         if sec_type not in supported_sec_types:
             raise ValueError(
                 f"Unrecognized security type '{sec_type}'. Supported types: {supported_sec_types}"

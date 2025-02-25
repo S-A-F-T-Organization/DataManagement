@@ -52,6 +52,7 @@ class TestInitializeDBEngine(unittest.TestCase):
         self.assertEqual(str(context.exception), "Invalid database dialect detected")
 
 class TestCreateTable(unittest.TestCase):
+    """Tests the create_table method"""
     def setUp(self):
         """Set up an in-memory SQL engine before each test."""
         self.engine = initalize_db_engine("sqlite", ":memory:")
@@ -73,20 +74,20 @@ class TestCreateTable(unittest.TestCase):
 
         # Check SecurityTypeID column
         security_type_id = columns[0]
-        self.assertEqual(security_type_id["name"], "SecurityTypeID")
+        self.assertEqual(security_type_id["name"], "security_type_id")
         self.assertTrue(security_type_id["primary_key"])
         self.assertEqual(str(security_type_id["type"]).upper(), "INTEGER")
 
         # Check SecurityType column
         security_type = columns[1]
-        self.assertEqual(security_type["name"], "SecurityType")
+        self.assertEqual(security_type["name"], "security_type")
         self.assertFalse(security_type["nullable"])
         self.assertEqual(str(security_type["type"]).upper(), "TEXT")
 
         # Check unique constraint on SecurityType
         unique_constraints = inspector.get_unique_constraints("SecurityTypes")
         self.assertEqual(len(unique_constraints), 1, "Expected one unique constraint on SecurityTypes.")
-        self.assertEqual(unique_constraints[0]["column_names"], ["SecurityType"])
+        self.assertEqual(unique_constraints[0]["column_names"], ["security_type"])
 
     def test_create_inferences_table_failure(self):
         """Test that creating the Inferences table fails due to a missing foreign key reference."""
