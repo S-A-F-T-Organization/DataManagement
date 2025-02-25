@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS SecurityExchanges (
-    [ExchangeID] INTEGER PRIMARY KEY,
-    [Exchange] TEXT NOT NULL,
+    [exchange_id] INTEGER PRIMARY KEY,
+    [exchange] TEXT NOT NULL,
     UNIQUE(Exchange)
 )

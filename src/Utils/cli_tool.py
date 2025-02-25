@@ -9,7 +9,7 @@ from src.Utils.cli_checks import (
     check_db_name,
     check_security_types,
     check_yes_or_no,
-    check_quotes_type
+    check_quotes_type,
 )
 
 
@@ -40,9 +40,10 @@ class CLITool:
                 "cleaning_func": lambda s: s,
                 "check_func": check_db_name,
                 "corresponding_attribute": "db_name",
-            }]
+            },
+        ]
         return sql_info_list
-    
+
     @property
     def initial_flags_questions(self) -> List[dict]:
         """Returns a list of initial flags for the CLI tool"""
@@ -59,7 +60,7 @@ class CLITool:
                 "cleaning_func": lambda s: s.lower().strip(),
                 "check_func": check_yes_or_no,
                 "corresponding_attribute": "portfolio_data_flag",
-            }
+            },
         ]
         return initial_flags_list
 
@@ -86,15 +87,17 @@ class CLITool:
                 "corresponding_attribute": "quotes_flag",
             },
             {
-                "q_text": "Of the following, which securities do you plan to track?" +
-                "[Stocks, ETFs, Forex, Futures, All] (comma-separated): ",
-                "cleaning_func": lambda securities_input: [sec.strip() for sec in securities_input.split(",")],
+                "q_text": "Of the following, which securities do you plan to track?"
+                + "[Stocks, ETFs, Forex, Futures, All] (comma-separated): ",
+                "cleaning_func": lambda securities_input: [
+                    sec.strip() for sec in securities_input.split(",")
+                ],
                 "check_func": check_security_types,
                 "corresponding_attribute": "seed_data",
-            }
+            },
         ]
         return mkt_data_q_list
-    
+
     @property
     def quotes_questions(self):
         """Sets the questions for the quotes data"""
@@ -108,7 +111,9 @@ class CLITool:
         ]
         return quotes_questions
 
-    def get_prev_q_index(self, current_q_index, current_group) -> tuple[int, List]:
+    def get_prev_question_index(
+        self, current_q_index, current_group
+    ) -> tuple[int, List]:
         """
         If someone wants to go back to a previous question, then they can use ctrl+z
         to undo. If they are not on the first question, this will return the index of the previous question
@@ -120,13 +125,13 @@ class CLITool:
         print("There are no other previous questions")
         return current_q_index, current_group
 
-    def get_q_info(
+    def get_question_info(
         self, q_group: List, q_index: int
     ) -> tuple[str, Callable, Callable, Any]:
         """
         Gets all the information for a question in a group
         """
-        q_info:dict = q_group[q_index]
+        q_info: dict = q_group[q_index]
         q_text = q_info.get("q_text")
         cleaning_func = q_info.get("cleaning_fun")
         check_func = q_info.get("check_func")
@@ -138,24 +143,23 @@ class CLITool:
         This sets the question text, gets the response as an input,
         cleans the response, then sets the corresponding attribute.
         """
-        q_text, cleaning_func, check_func, attr_name = self.get_q_info(q_group, q_index)
+        q_text, cleaning_func, check_func, attr_name = self.get_question_info(q_group, q_index)
         response: str = input(f"{q_text}: ")
 
         # If the user hits ctrl+z
         if response == "^Z":
-            q_index = self.get_prev_q_index(q_index, q_group)
+            q_index = self.get_prev_question_index(q_index, q_group)
             return q_index, q_group
 
         clean_response = cleaning_func(response)
+        updated_val = check_func(clean_response)
 
         try:
-            updated_val = check_func(clean_response)
             setattr(self.config_info, attr_name, clean_response)
             q_index += 1
             return q_index, q_group
         except Warning as w:
             print(w)
-            updated_val = "clean_response"+".db" ## This is a placeholder
             setattr(self.config_info, attr_name, updated_val)
             q_index += 1
             return q_index, q_group
@@ -186,7 +190,7 @@ class CLITool:
             q_index = 0
             while q_index < len(self.mkt_data_q_list):
                 self.q_builder(q_index, self.mkt_data_q_list)
-        
+
         # Quotes Questions
         if self.config_info.quotes_flag:
             q_index = 0

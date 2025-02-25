@@ -70,7 +70,7 @@ class MetadataStrategies(ABC):
             create_table(db_engine=self.db_engine, full_path=full_path)
 
         for script in main_tables:
-            full_main = os.path.join(self.scripts_base, main_tables)
+            full_main = os.path.join(self.scripts_base, script)
             create_table(db_engine=self.db_engine, full_path=full_main)
 
 
@@ -84,12 +84,12 @@ class ToIntStrategy(HistoricalPricesStrategy):
             tables.append("options_ohlcv_int.sql")
         if self.config_info.ohlcv_flag:
             tables.append("security_prices_ohlcv_int.sql")
-        if self.config_info.full_quotes_flag:
-            tables.append("security_prices_mbp_full_int.sql")
-        if self.config_info.consolidated_quotes_flag:
-            tables.append("security_prices_mbp_consolidated_int.sql")
+        if self.config_info.quotes_flag:
+            if self.config_info.full_quotes_flag:
+                tables.append("security_prices_mbp_full_int.sql")
+            else:
+                tables.append("security_prices_mbp_consolidated_int.sql")
         return tables
-
 
 class RealStrategy(HistoricalPricesStrategy):
     """This strategy creates the historical prices tables for the database"""
@@ -100,10 +100,11 @@ class RealStrategy(HistoricalPricesStrategy):
             tables.append("options_ohlcv_float.sql")
         if self.config_info.ohlcv_flag:
             tables.append("security_prices_ohlcv_float.sql")
-        if self.config_info.full_quotes_flag:
-            tables.append("security_prices_mbp_full_float.sql")
-        if self.config_info.consolidated_quotes_flag:
-            tables.append("security_prices_mbp_consolidated_float.sql")
+        if self.config_info.quotes_flag:
+            if self.config_info.full_quotes_flag:
+                tables.append("security_prices_mbp_full_float.sql")
+            else:
+                tables.append("security_prices_mbp_consolidated_float.sql")
         return tables
 
 

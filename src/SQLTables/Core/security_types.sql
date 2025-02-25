@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS SecurityTypes (
-    [SecurityTypeID] INTEGER PRIMARY KEY,
-    [SecurityType] TEXT NOT NULL,
-    UNIQUE(SecurityType)
+    [security_type_id] INTEGER PRIMARY KEY,
+    [security_type] TEXT NOT NULL,
+    UNIQUE(security_type)
 )

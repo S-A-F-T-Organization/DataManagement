@@ -1,3 +1,4 @@
 .env
 config/my_config.yml
 .VSCodeCounter/
+venv/
