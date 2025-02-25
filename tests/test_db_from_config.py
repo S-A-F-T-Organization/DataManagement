@@ -208,10 +208,10 @@ class TestDBFromConfig(unittest.TestCase):
         with (
             patch.object(
                 self.db_from_config, "create_metadata_tables"
-            ) as mock_create_metadata,
+            ) as mock_create_metadata, #pylint: disable=unused-variable  # noqa: F841
             patch.object(
                 self.db_from_config, "create_historical_prices"
-            ) as mock_create_historical,
+            ) as mock_create_historical, #pylint: disable=unused-variable  # noqa: F841
             patch("src.Utils.db_strategies.PortfolioDBTables") as mock_portfolio_tables,
         ):
             # Call the method
