@@ -1,7 +1,7 @@
 """Tests that the ConfigInfo class is initialized correctly."""
 
 import unittest
-from src.Utils.config_info import ConfigInfo
+from saft_data_mgmt.Utils.config_info import ConfigInfo
 
 class TestConfigInfo(unittest.TestCase):
     """Tests the ConfigInfo class."""

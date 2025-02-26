@@ -2,7 +2,7 @@
 
 import unittest
 import warnings
-from src.Utils.cli_checks import (
+from saft_data_mgmt.Utils.cli_checks import (
     check_dialect,
     check_db_path,
     check_db_name,

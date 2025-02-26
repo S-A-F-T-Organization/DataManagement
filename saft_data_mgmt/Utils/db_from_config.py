@@ -1,8 +1,8 @@
 """This module contains all of the functionality to create a new database from a ConfigInfo class"""
 
-from src.Utils import helpers
-from src.Utils.config_info import ConfigInfo
-from src.Utils import db_strategies as strats
+from saft_data_mgmt.Utils import helpers
+from saft_data_mgmt.Utils.config_info import ConfigInfo
+from saft_data_mgmt.Utils import db_strategies as strats
 
 
 class DBFromConfig:

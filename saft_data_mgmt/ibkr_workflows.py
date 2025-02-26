@@ -15,7 +15,8 @@ The associated dataclasses and SQL table columns are:
 from typing import Tuple, Optional
 import logging
 from ib_insync import Contract
-from src.ibkr_utils import IBKRUtils as ibu
+
+from saft_data_mgmt.Models.core_objects import SecuritiesInfo
 
 # Enable logging if needed
 logging.basicConfig(level=logging.INFO)
@@ -114,6 +115,7 @@ class GetCoreInfo:
         return sec_info
 
     def get_exchange_timezone(self, contract) -> str:
+        """Placeholder"""
         contract = Contract(self.symbol, self.sec_type)
         qualified_contracts = self.ib.qualifyContracts(contract)
         if not qualified_contracts:
@@ -132,6 +134,7 @@ class GetCoreInfo:
         return timezone
 
     def sec_info_main(self):
+        """Place Holder"""
         contract = self.get_contract()
         sec_info = self.get_security_info(contract=contract)
         time_zone = self.get_exchange_timezone(contract=contract)

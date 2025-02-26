@@ -1,6 +1,6 @@
 Metadata-Version: 2.2
 Name: saft_data_mgmt
-Version: 0.2.0
+Version: 0.2.2
 Summary: A package for managing financial data, specifically made for algorithmic traders.
 Home-page: https://github.com/S-A-F-T-Organization/DataManagement
 Author: Travis Swiger

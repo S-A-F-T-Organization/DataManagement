@@ -5,8 +5,8 @@ from typing import List
 
 from sqlalchemy import Engine
 
-from src.Utils.config_info import ConfigInfo
-from src.Utils.helpers import initalize_db_engine, create_table
+from saft_data_mgmt.Utils.config_info import ConfigInfo
+from saft_data_mgmt.Utils.helpers import initalize_db_engine, create_table
 
 
 ## Strategy Base Classes ##
@@ -16,7 +16,7 @@ class HistoricalPricesStrategy(ABC):
     def __init__(self, config_info: ConfigInfo):
         self.db_path = config_info.db_path
         self.db_dialect = config_info.db_dialect
-        self.scripts_base = "src/SQLTables/HistoricalPrices"
+        self.scripts_base = "saft_data_mgmt/SQLTables/HistoricalPrices"
         self.config_info = config_info
 
     @property
@@ -49,7 +49,7 @@ class MetadataStrategies(ABC):
         self.db_path = config_info.db_path
         self.db_dialect = config_info.db_dialect
         self.security_types = config_info.security_types
-        self.scripts_base = "src/SQLTables/SecuritiesMetadata"
+        self.scripts_base = "saft_data_mgmt/SQLTables/SecuritiesMetadata"
         self.config_info = config_info
 
     @property
@@ -187,7 +187,7 @@ class CoreTables:
 
     def __init__(self, config_info: ConfigInfo):
         self.config_info = config_info
-        self.core_folder = "src/SQLTables/Core"
+        self.core_folder = "saft_data_mgmt/SQLTables/Core"
         self.first_scripts = ["security_exchange.sql", "security_types.sql", "securities_info.sql"]
 
     @property
@@ -213,7 +213,7 @@ class PortfolioDBTables:
 
     def __init__(self, config_info: ConfigInfo):
         self.config_info = config_info
-        self.core_folder = "src/SQLTables/PortfolioDB"
+        self.core_folder = "saft_data_mgmt/SQLTables/PortfolioDB"
 
     @property
     def db_engine(self) -> Engine:

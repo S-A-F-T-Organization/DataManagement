@@ -3,9 +3,9 @@
 import unittest
 from unittest.mock import patch, MagicMock, call
 import logging
-from src.Utils.db_from_config import DBFromConfig
-from src.Utils.config_info import ConfigInfo
-from src.Utils import db_strategies as strats
+from saft_data_mgmt.Utils.db_from_config import DBFromConfig
+from saft_data_mgmt.Utils.config_info import ConfigInfo
+from saft_data_mgmt.Utils import db_strategies as strats
 
 
 class TestDBFromConfig(unittest.TestCase):
@@ -25,7 +25,7 @@ class TestDBFromConfig(unittest.TestCase):
         self.config_info.security_types = ["STK", "ETF"]
 
         # Create the DBFromConfig instance
-        with patch("src.Utils.helpers.setup_log_to_console") as mock_setup_log:
+        with patch("saft_data_mgmt.Utils.helpers.setup_log_to_console") as mock_setup_log:
             mock_setup_log.return_value = MagicMock(spec=logging.Logger)
             self.db_from_config = DBFromConfig(self.config_info)
             self.mock_logger = self.db_from_config.logger
@@ -38,7 +38,7 @@ class TestDBFromConfig(unittest.TestCase):
         """Test initialization with 'ALL' as security types."""
         self.config_info.security_types = ["ALL"]
 
-        with patch("src.Utils.helpers.setup_log_to_console"):
+        with patch("saft_data_mgmt.Utils.helpers.setup_log_to_console"):
             db_from_config = DBFromConfig(self.config_info)
 
         expected_types = ["STK", "ETF", "FUT", "FOREX", "FUND", "OPT"]
@@ -48,7 +48,7 @@ class TestDBFromConfig(unittest.TestCase):
         """Test initialization with empty security types list."""
         self.config_info.security_types = []
 
-        with patch("src.Utils.helpers.setup_log_to_console"):
+        with patch("saft_data_mgmt.Utils.helpers.setup_log_to_console"):
             db_from_config = DBFromConfig(self.config_info)
 
         self.assertEqual(db_from_config.config_info.security_types, [])
@@ -71,7 +71,7 @@ class TestDBFromConfig(unittest.TestCase):
         self.assertEqual(securities_map["FOREX"], strats.ForexMetadata)
         self.assertEqual(securities_map["FUND"], strats.MutualFundsMetadata)
 
-    @patch("src.Utils.db_strategies.ToIntStrategy")
+    @patch("saft_data_mgmt.Utils.db_strategies.ToIntStrategy")
     def test_create_historical_prices_to_int(self, mock_to_int_strategy):
         """Test creating historical prices tables with to_int_flag=True."""
         # Setup mock
@@ -93,7 +93,7 @@ class TestDBFromConfig(unittest.TestCase):
             ]
         )
 
-    @patch("src.Utils.db_strategies.RealStrategy")
+    @patch("saft_data_mgmt.Utils.db_strategies.RealStrategy")
     def test_create_historical_prices_real(self, mock_real_strategy):
         """Test creating historical prices tables with to_int_flag=False."""
         # Change config
@@ -110,8 +110,8 @@ class TestDBFromConfig(unittest.TestCase):
         mock_real_strategy.assert_called_once_with(self.config_info)
         mock_strategy_instance.create_historical_prices_tables.assert_called_once()
 
-    @patch("src.Utils.db_strategies.CoreTables")
-    @patch("src.Utils.db_strategies.PortfolioDBTables")
+    @patch("saft_data_mgmt.Utils.db_strategies.CoreTables")
+    @patch("saft_data_mgmt.Utils.db_strategies.PortfolioDBTables")
     def test_create_config_tables_all_flags(
         self, mock_portfolio_tables, mock_core_tables
     ):
@@ -153,7 +153,7 @@ class TestDBFromConfig(unittest.TestCase):
             ]
         )
 
-    @patch("src.Utils.db_strategies.CoreTables")
+    @patch("saft_data_mgmt.Utils.db_strategies.CoreTables")
     def test_create_config_tables_no_market_data(self, mock_core_tables):
         """Test create_config_tables with market_data_flag disabled."""
         # Change config
@@ -171,7 +171,7 @@ class TestDBFromConfig(unittest.TestCase):
             patch.object(
                 self.db_from_config, "create_historical_prices"
             ) as mock_create_historical,
-            patch("src.Utils.db_strategies.PortfolioDBTables") as mock_portfolio_tables,
+            patch("saft_data_mgmt.Utils.db_strategies.PortfolioDBTables") as mock_portfolio_tables,
         ):
             mock_portfolio_instance = MagicMock()
             mock_portfolio_tables.return_value = mock_portfolio_instance
@@ -194,7 +194,7 @@ class TestDBFromConfig(unittest.TestCase):
             ]
         )
 
-    @patch("src.Utils.db_strategies.CoreTables")
+    @patch("saft_data_mgmt.Utils.db_strategies.CoreTables")
     def test_create_config_tables_no_portfolio_data(self, mock_core_tables):
         """Test create_config_tables with portfolio_data_flag disabled."""
         # Change config
@@ -212,7 +212,7 @@ class TestDBFromConfig(unittest.TestCase):
             patch.object(
                 self.db_from_config, "create_historical_prices"
             ) as mock_create_historical, #pylint: disable=unused-variable  # noqa: F841
-            patch("src.Utils.db_strategies.PortfolioDBTables") as mock_portfolio_tables,
+            patch("saft_data_mgmt.Utils.db_strategies.PortfolioDBTables") as mock_portfolio_tables,
         ):
             # Call the method
             self.db_from_config.create_config_tables()

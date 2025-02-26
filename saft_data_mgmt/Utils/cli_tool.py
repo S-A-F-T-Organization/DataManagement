@@ -1,8 +1,8 @@
 """This module contains the CLI tool for implementing a SAFT DB schema"""
 from typing import List, Callable, Any
 
-from src.Utils.config_info import ConfigInfo
-from src.Utils.cli_checks import (
+from saft_data_mgmt.Utils.config_info import ConfigInfo
+from saft_data_mgmt.Utils.cli_checks import (
     check_dialect,
     check_db_path,
     check_db_name,

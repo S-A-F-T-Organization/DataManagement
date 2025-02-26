@@ -3,9 +3,9 @@
 import unittest
 from unittest.mock import patch
 import warnings
-from src.Utils.cli_tool import CLITool
-from src.Utils.config_info import ConfigInfo
-from src.Utils.cli_checks import check_yes_or_no, check_dialect
+from saft_data_mgmt.Utils.cli_tool import CLITool
+from saft_data_mgmt.Utils.config_info import ConfigInfo
+from saft_data_mgmt.Utils.cli_checks import check_yes_or_no, check_dialect
 
 
 class TestCLITool(unittest.TestCase):

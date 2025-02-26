@@ -8,7 +8,7 @@ import os
 
 from sqlalchemy import inspect
 
-from src.Utils.db_strategies import (
+from saft_data_mgmt.Utils.db_strategies import (
     HistoricalPricesStrategy,
     ToIntStrategy,
     RealStrategy,
@@ -20,8 +20,8 @@ from src.Utils.db_strategies import (
     CoreTables,
     PortfolioDBTables,
 )
-from src.Utils.helpers import create_table, initalize_db_engine
-from src.Utils.config_info import ConfigInfo
+from saft_data_mgmt.Utils.helpers import create_table, initalize_db_engine
+from saft_data_mgmt.Utils.config_info import ConfigInfo
 
 
 class TestHistoricalPricesStrategy(unittest.TestCase):
@@ -50,11 +50,11 @@ class TestHistoricalPricesStrategy(unittest.TestCase):
         strategy = ConcreteHistoricalPrices(self.config_info)
         self.assertEqual(strategy.db_path, ":memory:")
         self.assertEqual(strategy.db_dialect, "sqlite")
-        self.assertEqual(strategy.scripts_base, "src/SQLTables/HistoricalPrices")
+        self.assertEqual(strategy.scripts_base, "saft_data_mgmt/SQLTables/HistoricalPrices")
         self.assertEqual(strategy.config_info, self.config_info)
         self.assertEqual(strategy.config_info.db_name, "test.db")
 
-    @patch("src.Utils.db_strategies.initalize_db_engine")
+    @patch("saft_data_mgmt.Utils.db_strategies.initalize_db_engine")
     def test_db_engine_property(self, mock_init_engine):
         """Test that the db_engine property initializes correctly."""
 
@@ -184,8 +184,8 @@ class TestRealStrategy(unittest.TestCase):
         ]
         self.assertEqual(strategy.get_tables(), expected_tables)
 
-    @patch("src.Utils.db_strategies.create_table")
-    @patch("src.Utils.db_strategies.initalize_db_engine")
+    @patch("saft_data_mgmt.Utils.db_strategies.create_table")
+    @patch("saft_data_mgmt.Utils.db_strategies.initalize_db_engine")
     def test_create_historical_prices_tables(self, mock_init_engine, mock_create_table):
         """Test that create_historical_prices_tables creates tables correctly."""
         self.config_info.security_types = ["OPT"]
@@ -200,11 +200,11 @@ class TestRealStrategy(unittest.TestCase):
         expected_calls = [
             unittest.mock.call(
                 db_engine=mock_engine,
-                full_path="src/SQLTables/HistoricalPrices\\options_ohlcv_float.sql",
+                full_path="saft_data_mgmt/SQLTables/HistoricalPrices\\options_ohlcv_float.sql",
             ),
             unittest.mock.call(
                 db_engine=mock_engine,
-                full_path="src/SQLTables/HistoricalPrices\\security_prices_ohlcv_float.sql",
+                full_path="saft_data_mgmt/SQLTables/HistoricalPrices\\security_prices_ohlcv_float.sql",
             ),
         ]
         mock_create_table.assert_has_calls(expected_calls)
@@ -277,10 +277,10 @@ class TestMetadataStrategies(unittest.TestCase):
         self.assertEqual(strategy.db_path, ":memory:")
         self.assertEqual(strategy.db_dialect, "sqlite")
         self.assertEqual(strategy.security_types, ["STK", "ETF"])
-        self.assertEqual(strategy.scripts_base, "src/SQLTables/SecuritiesMetadata")
+        self.assertEqual(strategy.scripts_base, "saft_data_mgmt/SQLTables/SecuritiesMetadata")
 
-    @patch("src.Utils.db_strategies.create_table")
-    @patch("src.Utils.db_strategies.initalize_db_engine")
+    @patch("saft_data_mgmt.Utils.db_strategies.create_table")
+    @patch("saft_data_mgmt.Utils.db_strategies.initalize_db_engine")
     def test_create_metadata_tables(self, mock_init_engine, mock_create_table):
         """Test table creation sequence"""
         mock_engine = MagicMock()
@@ -301,11 +301,11 @@ class TestMetadataStrategies(unittest.TestCase):
         expected_calls = [
             unittest.mock.call(
                 db_engine=mock_engine,
-                full_path="src/SQLTables/SecuritiesMetadata\\test1.sql",
+                full_path="saft_data_mgmt/SQLTables/SecuritiesMetadata\\test1.sql",
             ),
             unittest.mock.call(
                 db_engine=mock_engine,
-                full_path="src/SQLTables/SecuritiesMetadata\\test2.sql",
+                full_path="saft_data_mgmt/SQLTables/SecuritiesMetadata\\test2.sql",
             ),
         ]
         mock_create_table.assert_has_calls(expected_calls, any_order=False)
@@ -426,13 +426,13 @@ class TestCoreTables(unittest.TestCase):
     def test_initialization(self):
         """Test that the CoreTables class is initialized correctly."""
         self.assertEqual(self.core_tables.config_info, self.config_info)
-        self.assertEqual(self.core_tables.core_folder, "src/SQLTables/Core")
+        self.assertEqual(self.core_tables.core_folder, "saft_data_mgmt/SQLTables/Core")
         self.assertEqual(
             self.core_tables.first_scripts,
             ["security_exchange.sql", "security_types.sql", "securities_info.sql"],
         )
 
-    @patch("src.Utils.db_strategies.create_table")
+    @patch("saft_data_mgmt.Utils.db_strategies.create_table")
     def test_create_core_tables(self, mock_create_table):
         """Test that create_core_tables calls create_table with the correct paths."""
         self.core_tables.create_core_tables()
@@ -440,15 +440,15 @@ class TestCoreTables(unittest.TestCase):
         expected_calls = [  # noqa: F841 pylint: disable=unused-variable
             unittest.mock.call(
                 db_engine=self.engine,
-                full_path="src/SQLTables/Core\\security_exchange.sql",
+                full_path="saft_data_mgmt/SQLTables/Core\\security_exchange.sql",
             ),
             unittest.mock.call(
                 db_engine=self.engine,
-                full_path="src/SQLTables/Core\\security_types.sql",
+                full_path="saft_data_mgmt/SQLTables/Core\\security_types.sql",
             ),
             unittest.mock.call(
                 db_engine=self.engine,
-                full_path="src/SQLTables/Core\\securities_info.sql",
+                full_path="saft_data_mgmt/SQLTables/Core\\securities_info.sql",
             ),
         ]
         self.assertEqual(mock_create_table.call_count, 3)
@@ -456,7 +456,7 @@ class TestCoreTables(unittest.TestCase):
     def test_security_types_table_structure(self):
         """Test that the SecurityTypes table is created with the correct structure."""
         # Create the table from the actual SQL file
-        sql_path = os.path.join("src", "SQLTables", "Core", "security_types.sql")
+        sql_path = os.path.join("saft_data_mgmt", "SQLTables", "Core", "security_types.sql")
         create_table(self.engine, sql_path)
 
         # Use SQLAlchemy inspector to check table structure
@@ -487,7 +487,7 @@ class TestCoreTables(unittest.TestCase):
 
     def test_securities_info_table_structure(self):
         """Test that the SecuritiesInfo table is created with the correct structure."""
-        sql_path = os.path.join("src", "SQLTables", "Core", "securities_info.sql")
+        sql_path = os.path.join("saft_data_mgmt", "SQLTables", "Core", "securities_info.sql")
         create_table(self.engine, sql_path)
 
         # Use SQLAlchemy inspector to check table structure
@@ -543,7 +543,7 @@ class TestPortfolioDBTables(unittest.TestCase):
         """Create tables needed for foreign key references."""
         # Create SecuritiesInfo table
         create_table(
-            self.engine, os.path.join("src", "SQLTables", "Core", "securities_info.sql")
+            self.engine, os.path.join("saft_data_mgmt", "SQLTables", "Core", "securities_info.sql")
         )
 
     def tearDown(self):
@@ -557,7 +557,7 @@ class TestPortfolioDBTables(unittest.TestCase):
         """Test that the PortfolioDBTables class is initialized correctly."""
         self.assertEqual(self.portfolio_tables.config_info, self.config_info)
         self.assertEqual(
-            self.portfolio_tables.core_folder, "src/SQLTables/PortfolioDB"
+            self.portfolio_tables.core_folder, "saft_data_mgmt/SQLTables/PortfolioDB"
         )
 
     def test_inference_tables_property(self):
@@ -590,7 +590,7 @@ class TestPortfolioDBTables(unittest.TestCase):
         ]
         self.assertEqual(self.portfolio_tables.transaction_tables, expected_tables)
 
-    @patch("src.Utils.db_strategies.create_table")
+    @patch("saft_data_mgmt.Utils.db_strategies.create_table")
     def test_create_portfolio_tables(self, mock_create_table):
         """Test that create_portfolio_tables calls create_table with the correct paths."""
         self.portfolio_tables.create_portfolio_tables()
@@ -602,7 +602,7 @@ class TestPortfolioDBTables(unittest.TestCase):
             expected_calls.append(
                 unittest.mock.call(
                     db_engine=self.engine,
-                    full_path=f"src/SQLTables/Core/PortfolioDB\\{script}",
+                    full_path=f"saft_data_mgmt/SQLTables/Core/PortfolioDB\\{script}",
                 )
             )
 
@@ -611,7 +611,7 @@ class TestPortfolioDBTables(unittest.TestCase):
             expected_calls.append(
                 unittest.mock.call(
                     db_engine=self.engine,
-                    full_path=f"src/SQLTables/Core/PortfolioDB\\{script}",
+                    full_path=f"saft_data_mgmt/SQLTables/Core/PortfolioDB\\{script}",
                 )
             )
         self.assertEqual(
@@ -623,7 +623,7 @@ class TestPortfolioDBTables(unittest.TestCase):
     def test_strategies_table_structure(self):
         """Test that the strategies table is created with the correct structure."""
         # Create the table from the actual SQL file if it exists
-        sql_path = os.path.join("src", "SQLTables", "PortfolioDB", "strategies.sql")
+        sql_path = os.path.join("saft_data_mgmt", "SQLTables", "PortfolioDB", "strategies.sql")
 
         # Skip test if file doesn't exist
         if not os.path.exists(sql_path):

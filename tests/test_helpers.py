@@ -9,7 +9,7 @@ import time
 
 from sqlalchemy import Engine, inspect
 
-from src.Utils.helpers import setup_log_to_console, initalize_db_engine, create_table
+from saft_data_mgmt.Utils.helpers import setup_log_to_console, initalize_db_engine, create_table
 
 
 class TestSetupLogger(unittest.TestCase):
@@ -60,7 +60,7 @@ class TestCreateTable(unittest.TestCase):
         """Set up test fixtures before each test method"""
         self.test_dir = tempfile.mkdtemp()
         self.engine = initalize_db_engine("sqlite", f"{self.test_dir}", "test.db")
-        self.security_types_path = "src/SQLTables/Core/security_types.sql"
+        self.security_types_path = "saft_data_mgmt/SQLTables/Core/security_types.sql"
 
     def tearDown(self):
         """Cleanup test database and files after each test."""

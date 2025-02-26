@@ -11,7 +11,7 @@ from sqlalchemy import MetaData, Engine
 from sqlalchemy.schema import CreateTable
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
-import src.DataObjects.db_field as db_field
+
 
 Base = declarative_base()
 class SaftTable:
@@ -222,7 +222,6 @@ class SaftTable:
 @dataclass
 class TableInfo:
     """A dataclass for the important table metadata"""
-    fields:List[db_field.Field] = None
     table_name:str = None
     pk:str=None
     fks:Optional[List[str]] = None
