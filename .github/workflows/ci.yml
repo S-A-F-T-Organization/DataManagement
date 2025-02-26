@@ -1,0 +1,35 @@
+name: CI - Unit Tests
+
+on:
+  push:
+    branches: [ main, Dev ]
+  pull_request:
+    branches: [ main, Dev ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: [3.8, 3.9, 3.10]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          # If you have test-specific dependencies:
+          pip install -r test-requirements.txt
+
+      - name: Run unit tests
+        run: |
+          python -m unittest discover

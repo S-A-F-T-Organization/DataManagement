@@ -3,3 +3,4 @@ PyYAML
 
 [dev]
 twine>=4.0.2
+build

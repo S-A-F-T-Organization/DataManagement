@@ -1,26 +1,36 @@
+"""Performs the setup for the saft_data_mgmt package."""
+
 from setuptools import setup, find_packages
+
+# Read the content of README.md file
+with open("README.md", encoding="utf-8") as f:
+    long_description = f.read()
 
 setup(
     name="saft_data_mgmt",
-    version="0.1.0",
+    version="0.2.0",
     description="A package for managing financial data, specifically made for algorithmic traders.",
-    long_description="This package helps with the management of data storage, etls, and warehousing for independent algorithmic traders. This includes storing historical price data for securities, strategy artifacts, portfolio performance information, and more.",
+    long_description=long_description,
     long_description_content_type="text/markdown",
     author="Travis Swiger",
     author_email="tswiger@stoneagefinancialtechnology.com",
     url="https://github.com/S-A-F-T-Organization/DataManagement",
     packages=find_packages(),
-    install_requires=[
-        "SQLAlchemy>=1.4",
-        "PyYAML"
-    ],
+    include_package_data=True,
+    package_data={
+        "": ["**/SQLTables/**/*.sql"],
+    },
+    install_requires=["SQLAlchemy>=1.4", "PyYAML"],
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
+        "Topic :: Office/Business :: Financial",
+        "Topic :: Database",
+        "Development Status :: 3 - Alpha",
     ],
     extras_require={
-        "dev": ["twine>=4.0.2"],
+        "dev": ["twine>=4.0.2", "build"],
     },
-    python_requires='>=3.7',
+    python_requires=">=3.7",
 )
