@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS Currencies (
-    [CurrencyID] INTEGER PRIMARY,
-    [CurrencyAbbr] TEXT,
-    UNIQUE(CurrencyAbbr)
+    [currency_id] INTEGER PRIMARY,
+    [currency_abbr] TEXT,
+    UNIQUE(currency_abbr)
 )

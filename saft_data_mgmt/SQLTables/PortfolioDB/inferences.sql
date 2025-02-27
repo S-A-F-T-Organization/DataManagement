@@ -7,8 +7,11 @@ CREATE TABLE IF NOT EXISTS Inferences(
     [inference_start_timestamp_utc_ms] INTEGER,
     [inference_end_timestamp_utc_ms] INTEGER,
     [candle_reference_timestamp_utc_sec] INTEGER,
-    [inference_status] TEXT,
-    UNIQUE (symbol_id, strategy_id, session_id),
+    UNIQUE (symbol_id, strategy_id, session_id, candle_reference_timestamp_utc_sec),
     FOREIGN KEY (symbol_id)
         REFERENCES SecuritiesInfo(symbol_id)
+    FOREIGN KEY (strategy_id)
+        REFERENCES Strategies(strategy_id)
+    FOREIGN KEY (session_id)
+        REFERENCES Sessions(session_id)
 )

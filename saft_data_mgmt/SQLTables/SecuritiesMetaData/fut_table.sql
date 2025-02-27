@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS FuturesMetadata (
     [tick_size] REAL,
     [tick_value] REAL,
     [underlying_asset_type_id] INTEGER,
-    [underlying_asset] TEXT,
+    [underlying_asset_name] TEXT,
     UNIQUE (symbol_id),
     FOREIGN KEY (underlying_asset_type_id)
         REFERENCES UnderlyingAssetTypes(underlying_asset_type_id),

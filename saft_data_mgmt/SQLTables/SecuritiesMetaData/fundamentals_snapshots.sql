@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS FundamentalsSnapShots (
+CREATE TABLE IF NOT EXISTS FundamentalsSnapshots (
     [snapshot_id] INTEGER PRIMARY KEY,
     [symbol_id] INTEGER,
     [timestamp_utc_sec] TEXT,

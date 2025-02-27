@@ -4,6 +4,47 @@ Below is the data dictionary for the tables based on the provided SQL definition
 
 ## Table of Contents
 
+- [Core Tables](#core-tables)
+- [Historical Prices](#historical-prices)
+  - [OHLCV Tables](#ohlcv-tables)
+  - [Options Tables](#options-tables)
+  - [Consolidated Quotes](#consolidated-quotes)
+  - [MBP Full](#mbp-full)
+- [Securities Metadata](#securities-metadata)
+  - [Cash Table](#cash-table)
+  - [Currencies Table](#currencies-table)
+  - [Earnings History](#earnings-history)
+  - [Equities Snapshots](#equities-snapshots)
+  - [ETF Table](#etf-table)
+  - [Fundamentals Snapshots](#fundamentals-snapshots)
+  - [Futures Table](#futures-table)
+  - [Industry Info](#industry-info)
+  - [Issuers Table](#issuers-table)
+  - [Mutual Fund Snapshots](#mutual-fund-snapshots)
+  - [Sector Info](#sector-info)
+  - [Stock Splits Table](#stock-splits-table)
+  - [Stock Table](#stock-table)
+  - [Underlying Assets Table](#underlying-assets-table)
+- [Portfolio Database](#portfolio-database)
+  - [Account Info](#account-info)
+  - [All Orders](#all-orders)
+  - [Cancelled Orders](#cancelled-orders)
+  - [Conditional Orders](#conditional-orders)
+  - [Executed Orders](#executed-orders)
+  - [Inference Steps](#inference-steps)
+  - [Inference Times](#inference-times)
+  - [Inferences](#inferences)
+  - [Model Libraries](#model-libraries)
+  - [Model Types](#model-types)
+  - [Models](#models)
+  - [Order Actions](#order-actions)
+  - [Order Types](#order-types)
+  - [Sessions](#sessions)
+  - [Strategies](#strategies)
+  - [Strategy Modules](#strategy-modules)
+  - [Transaction Types](#transaction-types)
+  - [Transactions](#transactions)
+
 ## Core Tables
 
 | Field Name            | Data Type | Definition                                                                 | Table                |
@@ -19,7 +60,7 @@ Below is the data dictionary for the tables based on the provided SQL definition
 | to_int                | INTEGER   | Number of factors of 10 to get a security's price to an integer + 2       | securities_info      |
 
 ## Historical Prices
-
+These are all of the tables we currently offer for tracking historical prices across various securities and in different schemas. This inlcudes our OHLCV security and options prices, along with our mbp and trade quotes schemas. The primary differences between the mbp and trades quotes schemas is that the trade schema is perfect when only dealing with top of book data (the best bids and asks) and tracking every trade made.
 ### OHLCV Tables
 
 | Field Name            | Data Type | Definition                                                                 | Table                          |
@@ -27,39 +68,42 @@ Below is the data dictionary for the tables based on the provided SQL definition
 | ohlcv_id              | INTEGER   | Unique identifier for each OHLCV record                                   | security_prices_ohlcv_int      |
 | symbol_id             | INTEGER   | Unique identifier for the security                                        | security_prices_ohlcv_int      |
 | timestamp_utc_ms      | INTEGER   | Timestamp in UTC milliseconds                                             | security_prices_ohlcv_int      |
-| open_price            | INTEGER   | Opening price of the security (scaled by `to_int`)                        | security_prices_ohlcv_int      |
-| high_price            | INTEGER   | Highest price of the security (scaled by `to_int`)                        | security_prices_ohlcv_int      |
-| low_price             | INTEGER   | Lowest price of the security (scaled by `to_int`)                         | security_prices_ohlcv_int      |
-| close_price           | INTEGER   | Closing price of the security (scaled by `to_int`)                        | security_prices_ohlcv_int      |
+| open_price            | INTEGER/REAL   | Opening price of the security (scaled by `to_int`)                        | security_prices_ohlcv_int      |
+| high_price            | INTEGER/REAL  | Highest price of the security (scaled by `to_int`)                        | security_prices_ohlcv_int      |
+| low_price             | INTEGER/REAL   | Lowest price of the security (scaled by `to_int`)                         | security_prices_ohlcv_int      |
+| close_price           | INTEGER/REAL   | Closing price of the security (scaled by `to_int`)                        | security_prices_ohlcv_int      |
 | volume                | INTEGER   | Trading volume of the security                                            | security_prices_ohlcv_int      |
 
 ### Options Tables
 
 | Field Name            | Data Type | Definition                                                                 | Table                          |
 |-----------------------|-----------|---------------------------------------------------------------------------|--------------------------------|
-| option_ohlcv_id       | INTEGER   | Unique identifier for each option OHLCV record                            | options_ohlcv_int              |
-| underlying_symbol_id  | INTEGER   | Unique identifier for the underlying security                             | options_ohlcv_int              |
-| timestamp_utc_ms      | INTEGER   | Timestamp in UTC milliseconds                                             | options_ohlcv_int              |
-| open_price            | INTEGER   | Opening price of the option (scaled by `to_int`)                          | options_ohlcv_int              |
-| high_price            | INTEGER   | Highest price of the option (scaled by `to_int`)                          | options_ohlcv_int              |
-| low_price             | INTEGER   | Lowest price of the option (scaled by `to_int`)                           | options_ohlcv_int              |
-| close_price           | INTEGER   | Closing price of the option (scaled by `to_int`)                          | options_ohlcv_int              |
-| volume                | INTEGER   | Trading volume of the option                                              | options_ohlcv_int              |
+| option_ohlcv_id       | INTEGER   | Unique identifier for each option OHLCV record                            | options_ohlcv              |
+| underlying_symbol_id  | INTEGER   | Unique identifier for the underlying security                             | options_ohlcv              |
+| timestamp_utc_ms      | INTEGER   | Timestamp in UTC milliseconds                                             | options_ohlcv              |
+| strike_price      | INTEGER/REAL   | The strike price of the option being tracked (scaled by `to_int`)                                             | options_ohlcv              |
+| option_type_id      | INTEGER   | The type of option being tracked, either a put `0` or a call `1`                                            | options_ohlcv              |
+| open_price            | INTEGER/REAL   | Opening price of the option (scaled by `to_int`)                          | options_ohlcv              |
+| high_price            | INTEGER/REAL   | Highest price of the option (scaled by `to_int`)                          | options_ohlcv              |
+| low_price             | INTEGER/REAL  | Lowest price of the option (scaled by `to_int`)                           | options_ohlcv              |
+| close_price           | INTEGER/REAL   | Closing price of the option (scaled by `to_int`)                          | options_ohlcv              |
+| volume                | INTEGER  | Trading volume of the option                                              | options_ohlcv              |
 
-### Consolidated Quotes
+### Trade Quotes
 
 | Field Name            | Data Type | Definition                                                                 | Table                          |
 |-----------------------|-----------|---------------------------------------------------------------------------|--------------------------------|
-| quote_id              | INTEGER   | Unique identifier for each quote                                          | security_prices_mbp_consolidated_int |
-| symbol_id             | INTEGER   | Unique identifier for the security                                        | security_prices_mbp_consolidated_int |
-| timestamp_utc_ms      | INTEGER   | Timestamp in UTC milliseconds                                             | security_prices_mbp_consolidated_int |
-| depth                 | INTEGER   | Depth of the market                                                       | security_prices_mbp_consolidated_int |
-| best_bid_price        | INTEGER   | Best bid price (scaled by `to_int`)                                       | security_prices_mbp_consolidated_int |
-| best_bid_size         | INTEGER   | Best bid size                                                             | security_prices_mbp_consolidated_int |
-| best_ask_price        | INTEGER   | Best ask price (scaled by `to_int`)                                       | security_prices_mbp_consolidated_int |
-| best_ask_size         | INTEGER   | Best ask size                                                             | security_prices_mbp_consolidated_int |
-| best_bid_ct           | INTEGER   | Best bid count                                                            | security_prices_mbp_consolidated_int |
-| best_ask_ct           | INTEGER   | Best ask count                                                            | security_prices_mbp_consolidated_int |
+| quote_id              | INTEGER   | Unique identifier for each quote                                          | security_prices_trade_quotes_int |
+| symbol_id             | INTEGER   | Unique identifier for the security                                        | security_prices_trade_quotes_int |
+| timestamp_utc_ms      | INTEGER   | Timestamp in UTC milliseconds                                             | security_prices_trade_quotes_int |
+| trade_size      | INTEGER   | The number of shares traded                                            | security_prices_trade_quotes_int |
+| trade_price      | INTEGER/REAL   | The price at which the security was traded (scaled by `to_int`)                                          | security_prices_trade_quotes_int |
+| best_bid_price        | INTEGER/REAL   | Best bid price (scaled by `to_int`)                                       | security_prices_trade_quotes_int |
+| best_bid_size         | INTEGER   | Best bid size                                                             | security_prices_trade_quotes_int |
+| best_ask_price        | INTEGER/REAL   | Best ask price (scaled by `to_int`)                                       | security_prices_trade_quotes_int |
+| best_ask_size         | INTEGER   | Best ask size                                                             | security_prices_trade_quotes_int |
+| best_bid_ct           | INTEGER   | Best bid count                                                            | security_prices_trade_quotes_int |
+| best_ask_ct           | INTEGER   | Best ask count                                                            | security_prices_trade_quotes_int |
 
 ### MBP Full
 
@@ -68,7 +112,7 @@ Below is the data dictionary for the tables based on the provided SQL definition
 | quote_id              | INTEGER   | Unique identifier for each quote                                          | security_prices_mbp_full_int   |
 | symbol_id             | INTEGER   | Unique identifier for the security                                        | security_prices_mbp_full_int   |
 | timestamp_utc         | INTEGER   | Timestamp in UTC                                                          | security_prices_mbp_full_int   |
-| action                | INTEGER   | Action type                                                               | security_prices_mbp_full_int   |
+| action                | INTEGER   | Action type, i.e. trade, cancel, add                                                               | security_prices_mbp_full_int   |
 | side                  | INTEGER   | Side of the market (bid/ask)                                              | security_prices_mbp_full_int   |
 | size                  | INTEGER   | Size of the order                                                         | security_prices_mbp_full_int   |
 | depth                 | INTEGER   | Depth of the market                                                       | security_prices_mbp_full_int   |
@@ -95,14 +139,6 @@ Below is the data dictionary for the tables based on the provided SQL definition
 |-----------------------|-----------|---------------------------------------------------------------------------|----------------------|
 | CurrencyID            | INTEGER   | Unique identifier for each currency                                       | currencies_table     |
 | CurrencyAbbr          | TEXT      | Abbreviation of the currency                                              | currencies_table     |
-
-### Earnings History
-
-| Field Name            | Data Type | Definition                                                                 | Table                |
-|-----------------------|-----------|---------------------------------------------------------------------------|----------------------|
-| SymbolID              | INTEGER   | Unique identifier for each security                                       | earnings_history     |
-| DateTime              | TEXT      | Date and time of the earnings report                                      | earnings_history     |
-| Earnings              | REAL      | Earnings value                                                            | earnings_history     |
 
 ### Equities Snapshots
 
@@ -225,12 +261,12 @@ Below is the data dictionary for the tables based on the provided SQL definition
 | order_id              | INTEGER   | Unique identifier for each order                                          | all_orders           |
 | symbol_id             | INTEGER   | Unique identifier for the security                                        | all_orders           |
 | broker_order_id       | INTEGER   | Broker-specific order identifier                                          | all_orders           |
-| order_placed_datetime | INTEGER   | Timestamp when the order was placed                                       | all_orders           |
+| order_placed_timestamp_utc_ms | INTEGER   | Timestamp when the order was placed in ms using UTC timezone                                    | all_orders           |
 | transaction_id        | INTEGER   | Unique identifier for the transaction                                     | all_orders           |
 | order_type_id         | INTEGER   | Unique identifier for the order type                                      | all_orders           |
 | order_action_id       | INTEGER   | Unique identifier for the order action                                    | all_orders           |
 | inference_id          | INTEGER   | Unique identifier for the inference                                       | all_orders           |
-| quantity              | INTEGER   | Quantity of the order                                                     | all_orders           |
+| quantity              | INTEGER   | Quantity of the symbol/security in the order                                                     | all_orders           |
 
 ### Cancelled Orders
 
@@ -285,21 +321,20 @@ Below is the data dictionary for the tables based on the provided SQL definition
 | inference_start_timestamp_utc_ms | INTEGER | Start timestamp of the inference in UTC milliseconds                      | inferences           |
 | inference_end_timestamp_utc_ms | INTEGER | End timestamp of the inference in UTC milliseconds                        | inferences           |
 | candle_reference_timestamp_utc_sec | INTEGER | Reference timestamp of the candle in UTC seconds                          | inferences           |
-| inference_status      | TEXT      | Status of the inference                                                   | inferences           |
 
 ### Model Libraries
 
 | Field Name            | Data Type | Definition                                                                 | Table                |
 |-----------------------|-----------|---------------------------------------------------------------------------|----------------------|
 | model_library_id      | INTEGER   | Unique identifier for each model library                                  | model_libraries      |
-| model_library         | TEXT      | Name of the model library                                                 | model_libraries      |
+| model_library         | TEXT      | Name of the model library such as sci-kit learn or pytorch                                            | model_libraries      |
 
 ### Model Types
 
 | Field Name            | Data Type | Definition                                                                 | Table                |
 |-----------------------|-----------|---------------------------------------------------------------------------|----------------------|
 | model_type_id         | INTEGER   | Unique identifier for each model type                                     | model_types          |
-| model_type            | TEXT      | Name of the model type                                                    | model_types          |
+| model_type            | TEXT      | Name of the model type such as `StandardScaler`                                                    | model_types          |
 | model_library_id      | INTEGER   | Unique identifier for the model library                                   | model_types          |
 
 ### Models
@@ -317,14 +352,14 @@ Below is the data dictionary for the tables based on the provided SQL definition
 | Field Name            | Data Type | Definition                                                                 | Table                |
 |-----------------------|-----------|---------------------------------------------------------------------------|----------------------|
 | order_action_id       | INTEGER   | Unique identifier for each order action                                   | order_actions        |
-| order_action          | TEXT      | Name of the order action                                                  | order_actions        |
+| order_action          | TEXT      | Name of the order action such as `Buy` or `Sell`                                                  | order_actions        |
 
 ### Order Types
 
 | Field Name            | Data Type | Definition                                                                 | Table                |
 |-----------------------|-----------|---------------------------------------------------------------------------|----------------------|
 | order_type_id         | INTEGER   | Unique identifier for each order type                                     | order_types          |
-| order_type            | TEXT      | Name of the order type                                                    | order_types          |
+| order_type            | TEXT      | Name of the order type such as `Stop`, `Limit`, or `Market`                                                    | order_types          |
 
 ### Sessions
 
@@ -332,8 +367,7 @@ Below is the data dictionary for the tables based on the provided SQL definition
 |-----------------------|-----------|---------------------------------------------------------------------------|----------------------|
 | session_id            | INTEGER   | Unique identifier for each session                                        | sessions             |
 | created_timestamp_utc_ms | INTEGER | Timestamp when the session was created in UTC milliseconds                | sessions             |
-| DatetimeEnded         | INTEGER   | Timestamp when the session ended                                          | sessions             |
-| DataReaderStartDatetime | INTEGER | Start datetime for the data reader                                        | sessions             |
+| ended_timestamp_utc_ms         | INTEGER   | Timestamp when the session ended in UTC milliseconds                                      | sessions             |
 
 ### Strategies
 
@@ -341,11 +375,11 @@ Below is the data dictionary for the tables based on the provided SQL definition
 |-----------------------|-----------|---------------------------------------------------------------------------|----------------------|
 | strategy_id           | INTEGER   | Unique identifier for each strategy                                       | strategies           |
 | strategy_name         | TEXT      | Name of the strategy                                                      | strategies           |
-| strategy_version      | TEXT      | Version of the strategy                                                   | strategies           |
-| strategy_description  | TEXT      | Description of the strategy                                               | strategies           |
+| strategy_version      | TEXT      | Version of the strategy, should follow semantic versioning but this is not enforced                                                   | strategies           |
+| strategy_description  | TEXT      | Description of the strategy (optional)                                               | strategies           |
 
 ### Strategy Modules
-
+This useful if your strategy requires multiple python modules, can help with debugging and useful for tracking inference times and grouping inference steps into related groups
 | Field Name            | Data Type | Definition                                                                 | Table                |
 |-----------------------|-----------|---------------------------------------------------------------------------|----------------------|
 | module_id             | INTEGER   | Unique identifier for each module                                         | strategy_modules     |
@@ -357,7 +391,7 @@ Below is the data dictionary for the tables based on the provided SQL definition
 | Field Name            | Data Type | Definition                                                                 | Table                |
 |-----------------------|-----------|---------------------------------------------------------------------------|----------------------|
 | transaction_type_id   | INTEGER   | Unique identifier for each transaction type                               | transaction_types    |
-| transaction_type      | TEXT      | Name of the transaction type                                              | transaction_types    |
+| transaction_type      | TEXT      | Name of the transaction type such as `cancelled_order`, `dividend_payment`, `cash_infusion  `                                              | transaction_types    |
 
 ### Transactions
 

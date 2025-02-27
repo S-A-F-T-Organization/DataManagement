@@ -6,7 +6,7 @@ easy database manipulation, and easy integration of common workflows/ETLs
 from typing import List
 from dataclasses import dataclass
 from sqlalchemy import MetaData
-from saft_data_mgmt.DataObjects.db_table import SaftTable
+from saft_data_mgmt.Models.db_table import SaftTable
 from saft_data_mgmt.Utils import helpers
 
 @dataclass

@@ -1,9 +1,9 @@
 CREATE TABLE IF NOT EXISTS AllOrders (
     [order_id] INTEGER PRIMARY KEY,
     [symbol_id] INTEGER,
-    [broker_order_id] INTEGER,
-    [order_placed_datetime] INTEGER,
     [transaction_id] INTEGER,
+    [broker_order_id] INTEGER,
+    [order_placed_timestamp_utc_ms] INTEGER,
     [order_type_id] INTEGER,
     [order_action_id] INTEGER,
     [inference_id] INTEGER,

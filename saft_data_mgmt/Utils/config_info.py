@@ -19,6 +19,7 @@ class ConfigInfo:
     ohlcv_flag: bool = False
     quotes_flag: bool = False
     full_quotes_flag: bool = False
+    trade_quotes_flag: bool = False
     security_types: List[str] = field(default_factory=list)
 
     # Seed data

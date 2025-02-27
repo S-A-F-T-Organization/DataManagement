@@ -8,7 +8,6 @@ from saft_data_mgmt.Utils.cli_checks import (
     check_db_name,
     check_security_types,
     check_yes_or_no,
-    check_quotes_type,
 )
 
 
@@ -102,10 +101,16 @@ class CLITool:
         """Sets additional questions for the quotes data"""
         quotes_questions = [
             {
-                "q_text": "Would you like to store full quotes or consolidated? ['Full'/'Consolidated'] ",
+                "q_text": "Would you like to store full mbp quotes? ['Y/N'] ",
                 "cleaning_func": lambda s: s.lower().strip(),
-                "check_func": check_quotes_type,
+                "check_func": check_yes_or_no,
                 "corresponding_attribute": "full_quotes_flag",
+            },
+            {
+                "q_text": "Would you like to store trade level quotes? ['Y/N'] ",
+                "cleaning_func": lambda s: s.lower().strip(),
+                "check_func": check_yes_or_no,
+                "corresponding_attribute": "trade_quotes_flag",
             }
         ]
         return quotes_questions

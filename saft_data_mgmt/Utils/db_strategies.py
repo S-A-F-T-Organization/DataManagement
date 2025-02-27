@@ -95,8 +95,8 @@ class ToIntStrategy(HistoricalPricesStrategy):
         if self.config_info.quotes_flag:
             if self.config_info.full_quotes_flag:
                 tables.append("security_prices_mbp_full_int.sql")
-            else:
-                tables.append("security_prices_mbp_consolidated_int.sql")
+            if self.config_info.trade_quotes_flag:
+                tables.append("security_prices_trade_quotes_int.sql")
         return tables
 
 
@@ -112,8 +112,8 @@ class RealStrategy(HistoricalPricesStrategy):
         if self.config_info.quotes_flag:
             if self.config_info.full_quotes_flag:
                 tables.append("security_prices_mbp_full_float.sql")
-            else:
-                tables.append("security_prices_mbp_consolidated_float.sql")
+            if self.config_info.trade_quotes_flag:
+                tables.append("security_prices_trade_quotes_float.sql")
         return tables
 
 

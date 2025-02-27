@@ -4,5 +4,5 @@ CREATE TABLE IF NOT EXISTS MutualFundSnapshots (
     [expense_ratio] REAL NOT NULL,
     [ytd_return] REAL NOT NULL,
     FOREIGN KEY ([snapshot_id])
-        REFERENCES Snapshots([snapshot_id])
+        REFERENCES FunamentalsSnapshots([snapshot_id])
 )
