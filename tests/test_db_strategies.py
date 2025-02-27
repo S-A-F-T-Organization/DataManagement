@@ -50,7 +50,7 @@ class TestHistoricalPricesStrategy(unittest.TestCase):
         strategy = ConcreteHistoricalPrices(self.config_info)
         self.assertEqual(strategy.db_path, ":memory:")
         self.assertEqual(strategy.db_dialect, "sqlite")
-        self.assertEqual(strategy.scripts_base, "saft_data_mgmt/SQLTables/HistoricalPrices")
+        self.assertEqual(strategy.scripts_base, r"saft_data_mgmt\SQLTables\HistoricalPrices")
         self.assertEqual(strategy.config_info, self.config_info)
         self.assertEqual(strategy.config_info.db_name, "test.db")
 
@@ -201,11 +201,11 @@ class TestRealStrategy(unittest.TestCase):
         expected_calls = [
             unittest.mock.call(
                 db_engine=mock_engine,
-                full_path="saft_data_mgmt/SQLTables/HistoricalPrices\\options_ohlcv_float.sql",
+                full_path="saft_data_mgmt\\SQLTables\\HistoricalPrices\\options_ohlcv_float.sql",
             ),
             unittest.mock.call(
                 db_engine=mock_engine,
-                full_path="saft_data_mgmt/SQLTables/HistoricalPrices\\security_prices_ohlcv_float.sql",
+                full_path="saft_data_mgmt\\SQLTables\\HistoricalPrices\\security_prices_ohlcv_float.sql",
             ),
         ]
         mock_create_table.assert_has_calls(expected_calls)
@@ -279,7 +279,7 @@ class TestMetadataStrategies(unittest.TestCase):
         self.assertEqual(strategy.db_path, ":memory:")
         self.assertEqual(strategy.db_dialect, "sqlite")
         self.assertEqual(strategy.security_types, ["STK", "ETF"])
-        self.assertEqual(strategy.scripts_base, "saft_data_mgmt/SQLTables/SecuritiesMetadata")
+        self.assertEqual(strategy.scripts_base, r"saft_data_mgmt\SQLTables\SecuritiesMetaData")
 
     @patch("saft_data_mgmt.Utils.db_strategies.create_table")
     @patch("saft_data_mgmt.Utils.db_strategies.initalize_db_engine")
@@ -303,11 +303,15 @@ class TestMetadataStrategies(unittest.TestCase):
         expected_calls = [
             unittest.mock.call(
                 db_engine=mock_engine,
-                full_path="saft_data_mgmt/SQLTables/SecuritiesMetadata\\test1.sql",
+                full_path="saft_data_mgmt\\SQLTables\\SecuritiesMetaData\\test1.sql",
             ),
             unittest.mock.call(
                 db_engine=mock_engine,
-                full_path="saft_data_mgmt/SQLTables/SecuritiesMetadata\\test2.sql",
+                full_path="saft_data_mgmt\\SQLTables\\SecuritiesMetaData\\test2.sql",
+            ),
+            unittest.mock.call(
+                db_engine=mock_engine,
+                full_path="saft_data_mgmt\\SQLTables\\SecuritiesMetaData\\main.sql",
             ),
         ]
         mock_create_table.assert_has_calls(expected_calls, any_order=False)
@@ -428,7 +432,7 @@ class TestCoreTables(unittest.TestCase):
     def test_initialization(self):
         """Test that the CoreTables class is initialized correctly."""
         self.assertEqual(self.core_tables.config_info, self.config_info)
-        self.assertEqual(self.core_tables.core_folder, "saft_data_mgmt/SQLTables/Core")
+        self.assertEqual(self.core_tables.scripts_base, r"saft_data_mgmt\SQLTables\Core")
         self.assertEqual(
             self.core_tables.first_scripts,
             ["security_exchange.sql", "security_types.sql", "securities_info.sql"],
@@ -559,7 +563,7 @@ class TestPortfolioDBTables(unittest.TestCase):
         """Test that the PortfolioDBTables class is initialized correctly."""
         self.assertEqual(self.portfolio_tables.config_info, self.config_info)
         self.assertEqual(
-            self.portfolio_tables.core_folder, "saft_data_mgmt/SQLTables/PortfolioDB"
+            self.portfolio_tables.scripts_base, r"saft_data_mgmt\SQLTables\PortfolioDB"
         )
 
     def test_inference_tables_property(self):

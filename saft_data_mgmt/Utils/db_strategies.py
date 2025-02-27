@@ -16,9 +16,17 @@ class HistoricalPricesStrategy(ABC):
     def __init__(self, config_info: ConfigInfo):
         self.db_path = config_info.db_path
         self.db_dialect = config_info.db_dialect
-        self.scripts_base = "saft_data_mgmt/SQLTables/HistoricalPrices"
         self.config_info = config_info
 
+    @property
+    def scripts_base(self) -> str:
+        """The base folder for the SQL scripts."""
+        current_file = os.path.relpath(__file__)
+        base_path = current_file
+        while os.path.basename(base_path) != 'saft_data_mgmt':
+            base_path = os.path.dirname(base_path)
+        scripts_base = os.path.join(base_path, "SQLTables", "HistoricalPrices")
+        return scripts_base
     @property
     def db_engine(self) -> Engine:
         """The SQLAlchemy engine for the database."""
@@ -49,9 +57,18 @@ class MetadataStrategies(ABC):
         self.db_path = config_info.db_path
         self.db_dialect = config_info.db_dialect
         self.security_types = config_info.security_types
-        self.scripts_base = "saft_data_mgmt/SQLTables/SecuritiesMetadata"
         self.config_info = config_info
 
+    @property
+    def scripts_base(self) -> str:
+        """The base folder for the SQL scripts."""
+        current_file = os.path.relpath(__file__)
+        base_path = current_file
+        while os.path.basename(base_path) != 'saft_data_mgmt':
+            base_path = os.path.dirname(base_path)
+        scripts_base = os.path.join(base_path, "SQLTables", "SecuritiesMetaData")
+        return scripts_base
+    
     @property
     def db_engine(self) -> Engine:
         """The SQLAlchemy engine for the database."""
@@ -59,7 +76,7 @@ class MetadataStrategies(ABC):
             self.db_path, self.db_dialect, self.config_info.db_name
         )
         return db_engine
-
+    
     @abstractmethod
     def get_first_scripts(self) -> List[str]:
         """This method returns the first scripts to be run"""
@@ -187,9 +204,17 @@ class CoreTables:
 
     def __init__(self, config_info: ConfigInfo):
         self.config_info = config_info
-        self.core_folder = "saft_data_mgmt/SQLTables/Core"
         self.first_scripts = ["security_exchange.sql", "security_types.sql", "securities_info.sql"]
 
+    @property
+    def scripts_base(self) -> str:
+        """The base folder for the SQL scripts."""
+        current_file = os.path.relpath(__file__)
+        base_path = current_file
+        while os.path.basename(base_path) != 'saft_data_mgmt':
+            base_path = os.path.dirname(base_path)
+        scripts_base = os.path.join(base_path, "SQLTables", "Core")
+        return scripts_base
     @property
     def db_engine(self) -> Engine:
         """The SQLAlchemy engine for the database."""
@@ -204,7 +229,7 @@ class CoreTables:
         """Creates the core tables."""
 
         for script in self.first_scripts:
-            full_path = os.path.join(self.core_folder, script)
+            full_path = os.path.join(self.scripts_base, script)
             create_table(db_engine=self.db_engine, full_path=full_path)
 
 
@@ -213,8 +238,16 @@ class PortfolioDBTables:
 
     def __init__(self, config_info: ConfigInfo):
         self.config_info = config_info
-        self.core_folder = "saft_data_mgmt/SQLTables/PortfolioDB"
 
+    @property
+    def scripts_base(self) -> str:
+        """The base folder for the SQL scripts."""
+        current_file = os.path.relpath(__file__)
+        base_path = current_file
+        while os.path.basename(base_path) != 'saft_data_mgmt':
+            base_path = os.path.dirname(base_path)
+        scripts_base = os.path.join(base_path, "SQLTables", "PortfolioDB")
+        return scripts_base
     @property
     def db_engine(self) -> Engine:
         """The SQLAlchemy engine for the database."""
@@ -259,9 +292,9 @@ class PortfolioDBTables:
         """This method creates the portfolio tables for the database"""
         # create the inference tables
         for script in self.inference_tables:
-            full_path = os.path.join(self.core_folder, script)
+            full_path = os.path.join(self.scripts_base, script)
             create_table(db_engine=self.db_engine, full_path=full_path)
         # create the transaction tables
         for script in self.transaction_tables:
-            full_path = os.path.join(self.core_folder, script)
+            full_path = os.path.join(self.scripts_base, script)
             create_table(db_engine=self.db_engine, full_path=full_path)
