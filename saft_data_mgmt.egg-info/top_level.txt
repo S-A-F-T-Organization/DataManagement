@@ -1,2 +1,2 @@
-src
+saft_data_mgmt
 tests

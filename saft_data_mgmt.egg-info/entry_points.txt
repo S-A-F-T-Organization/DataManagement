@@ -1,0 +1,2 @@
+[console_scripts]
+setup-saft-db = saft_data_mgmt.setup_saft_db:main

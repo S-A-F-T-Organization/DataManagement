@@ -8,13 +8,18 @@ with open("README.md", encoding="utf-8") as f:
 
 setup(
     name="saft_data_mgmt",
-    version="0.2.0",
+    version="0.2.3",
     description="A package for managing financial data, specifically made for algorithmic traders.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Travis Swiger",
     author_email="tswiger@stoneagefinancialtechnology.com",
     url="https://github.com/S-A-F-T-Organization/DataManagement",
+    entry_points={
+        'console_scripts': [
+            'setup-saft-db=saft_data_mgmt.setup_saft_db:main',
+        ],
+    },
     packages=find_packages(),
     include_package_data=True,
     package_data={
