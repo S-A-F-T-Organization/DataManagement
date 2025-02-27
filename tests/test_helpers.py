@@ -9,7 +9,11 @@ import time
 
 from sqlalchemy import Engine, inspect
 
-from saft_data_mgmt.Utils.helpers import setup_log_to_console, initalize_db_engine, create_table
+from saft_data_mgmt.Utils.helpers import (
+    setup_log_to_console,
+    initalize_db_engine,
+    create_table,
+)
 
 
 class TestSetupLogger(unittest.TestCase):
@@ -52,10 +56,14 @@ class TestInitializeDBEngine(unittest.TestCase):
         """Test initializing engine with invalid dialect"""
         with self.assertRaises(ValueError) as context:
             initalize_db_engine("postgres", ":memory:", "test.db")
-        self.assertEqual(str(context.exception), "Invalid database dialect detected: postgres")
+        self.assertEqual(
+            str(context.exception), "Invalid database dialect detected: postgres"
+        )
+
 
 class TestCreateTable(unittest.TestCase):
     """Tests the create_table method"""
+
     def setUp(self):
         """Set up test fixtures before each test method"""
         self.test_dir = tempfile.mkdtemp()
@@ -64,7 +72,7 @@ class TestCreateTable(unittest.TestCase):
 
     def tearDown(self):
         """Cleanup test database and files after each test."""
-        if hasattr(self, 'engine'):
+        if hasattr(self, "engine"):
             self.engine.dispose()  # Dispose of the SQLAlchemy engine
         time.sleep(0.5)  # Small delay to allow OS to release the file (optional)
         shutil.rmtree(self.test_dir, ignore_errors=True)
@@ -76,7 +84,10 @@ class TestCreateTable(unittest.TestCase):
 
         # Use SQLAlchemy inspector to verify the table structure
         inspector = inspect(self.engine)
-        self.assertTrue(inspector.has_table("SecurityTypes"), "SecurityTypes table does not exist in the database.")
+        self.assertTrue(
+            inspector.has_table("SecurityTypes"),
+            "SecurityTypes table does not exist in the database.",
+        )
 
         # Get column information
         columns = inspector.get_columns("SecurityTypes")
@@ -96,11 +107,18 @@ class TestCreateTable(unittest.TestCase):
 
         # Check unique constraint on SecurityType
         unique_constraints = inspector.get_unique_constraints("SecurityTypes")
-        self.assertEqual(len(unique_constraints), 1, "Expected one unique constraint on SecurityTypes.")
+        self.assertEqual(
+            len(unique_constraints),
+            1,
+            "Expected one unique constraint on SecurityTypes.",
+        )
         self.assertEqual(unique_constraints[0]["column_names"], ["security_type"])
 
     def test_create_inferences_table_failure(self):
         """Test that creating the Inferences table fails due to a missing foreign key reference."""
         # Verify that the Inferences table was not created
         inspector = inspect(self.engine)
-        self.assertFalse(inspector.has_table("Inferences"), "Inferences table should not be created due to foreign key error.")
+        self.assertFalse(
+            inspector.has_table("Inferences"),
+            "Inferences table should not be created due to foreign key error.",
+        )

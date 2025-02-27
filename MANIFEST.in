@@ -1,3 +1,3 @@
 include LICENSE
 include README.md
-recursive-include src/SQLTables *.sql
+recursive-include saft_data_mgmt/SQLTables *.sql
