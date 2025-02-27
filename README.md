@@ -1,5 +1,30 @@
 # DataManagement
+
 ## Table of Contents
+
+- [Overview](#overview)
+- [Integrations](#integrations)
+  - [Database Integrations](#database-integrations)
+  - [Brokerage and Datasource Integrations](#brokerage-and-datasource-integrations)
+- [Installation Instructions](#installation-instructions)
+- [CLI Tool](#cli-tool)
+  - [Usage Instructions](#usage-instructions)
+  - [Example Usage](#example-usage)
+- [Contribution Guidelines](#contribution-guidelines)
+  - [Development Process](#development-process)
+  - [Pull Request Process](#pull-request-process)
+  - [Code Style and Standards](#code-style-and-standards)
+    - [Python Style Guide](#python-style-guide)
+    - [SQL Style Guide](#sql-style-guide)
+  - [Testing Guidelines](#testing-guidelines)
+  - [Documentation Requirements](#documentation-requirements)
+  - [Version Control Guidelines](#version-control-guidelines)
+  - [Release Process](#release-process)
+- [Project Structure](#project-structure)
+- [SQL Tables and Database Overview](#sql-tables-and-database-overview)
+- [Models Overview](#models-overview)
+- [Utils Overview](#utils-overview)
+- [Module Scripts](#module-scripts)
 
 ## Overview
 

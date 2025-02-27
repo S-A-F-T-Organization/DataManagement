@@ -8,7 +8,7 @@ with open("README.md", encoding="utf-8") as f:
 
 setup(
     name="saft_data_mgmt",
-    version="0.2.2",
+    version="0.2.3",
     description="A package for managing financial data, specifically made for algorithmic traders.",
     long_description=long_description,
     long_description_content_type="text/markdown",

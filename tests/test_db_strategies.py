@@ -141,11 +141,12 @@ class TestToIntStrategy(unittest.TestCase):
         self.config_info.quotes_flag = True
         self.config_info.ohlcv_flag = False
         self.config_info.full_quotes_flag = False
+        self.config_info.trade_quotes_flag = True
 
         strategy = ToIntStrategy(self.config_info)
         expected_tables = [
             "options_ohlcv_int.sql",
-            "security_prices_mbp_consolidated_int.sql",
+            "security_prices_trade_quotes_int.sql",
         ]
         self.assertEqual(strategy.get_tables(), expected_tables)
 
@@ -243,11 +244,12 @@ class TestRealStrategy(unittest.TestCase):
         self.config_info.quotes_flag = True
         self.config_info.ohlcv_flag = False
         self.config_info.full_quotes_flag = False
+        self.config_info.trade_quotes_flag = True
 
         strategy = RealStrategy(self.config_info)
         expected_tables = [
             "options_ohlcv_float.sql",
-            "security_prices_mbp_consolidated_float.sql",
+            "security_prices_trade_quotes_float.sql",
         ]
         self.assertEqual(strategy.get_tables(), expected_tables)
 

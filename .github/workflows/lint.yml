@@ -2,9 +2,9 @@ name: CI - Linting
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, Dev ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, Dev ]
 
 jobs:
   lint:

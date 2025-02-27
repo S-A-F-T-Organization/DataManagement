@@ -92,7 +92,7 @@ class TestCLITool(unittest.TestCase):
         questions = self.cli_tool.quotes_questions
 
         # Check that we have the right number of questions
-        self.assertEqual(len(questions), 1)
+        self.assertEqual(len(questions), 2)
 
         # Check the question has the required fields
         q = questions[0]
