@@ -9,7 +9,6 @@ saft_data_mgmt/ibkr_workflows.py
 saft_data_mgmt/saft_db.py
 saft_data_mgmt/saft_workflows.py
 saft_data_mgmt/setup_saft_db.py
-saft_data_mgmt/tsting.py
 saft_data_mgmt.egg-info/PKG-INFO
 saft_data_mgmt.egg-info/SOURCES.txt
 saft_data_mgmt.egg-info/dependency_links.txt
@@ -28,12 +27,12 @@ saft_data_mgmt/SQLTables/Core/security_exchange.sql
 saft_data_mgmt/SQLTables/Core/security_types.sql
 saft_data_mgmt/SQLTables/HistoricalPrices/options_ohlcv_float.sql
 saft_data_mgmt/SQLTables/HistoricalPrices/options_ohlcv_int.sql
-saft_data_mgmt/SQLTables/HistoricalPrices/security_prices_mbp_consolidated_float.sql
-saft_data_mgmt/SQLTables/HistoricalPrices/security_prices_mbp_consolidated_int.sql
-saft_data_mgmt/SQLTables/HistoricalPrices/security_prices_mbp_full_float.sql
-saft_data_mgmt/SQLTables/HistoricalPrices/security_prices_mbp_full_int.sql
+saft_data_mgmt/SQLTables/HistoricalPrices/security_prices_mbp_float.sql
+saft_data_mgmt/SQLTables/HistoricalPrices/security_prices_mbp_int.sql
 saft_data_mgmt/SQLTables/HistoricalPrices/security_prices_ohlcv_float.sql
 saft_data_mgmt/SQLTables/HistoricalPrices/security_prices_ohlcv_int.sql
+saft_data_mgmt/SQLTables/HistoricalPrices/security_prices_trade_quotes_float.sql
+saft_data_mgmt/SQLTables/HistoricalPrices/security_prices_trade_quotes_int.sql
 saft_data_mgmt/SQLTables/PortfolioDB/account_info.sql
 saft_data_mgmt/SQLTables/PortfolioDB/all_orders.sql
 saft_data_mgmt/SQLTables/PortfolioDB/cancelled_orders.sql
@@ -60,7 +59,6 @@ saft_data_mgmt/SQLTables/PortfolioWarehouse/fact_Orders.sql
 saft_data_mgmt/SQLTables/PortfolioWarehouse/fact_Trades.sql
 saft_data_mgmt/SQLTables/SecuritiesMetaData/cash_table.sql
 saft_data_mgmt/SQLTables/SecuritiesMetaData/currencies_table.sql
-saft_data_mgmt/SQLTables/SecuritiesMetaData/earnings_history.sql
 saft_data_mgmt/SQLTables/SecuritiesMetaData/equities_snapshots.sql
 saft_data_mgmt/SQLTables/SecuritiesMetaData/etf_table.sql
 saft_data_mgmt/SQLTables/SecuritiesMetaData/fundamentals_snapshots.sql
