@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.7]
+### Added
+- None
+
+### Changed
+- SQLTables:
+    - SessionsTable renamed to Sessions
+    - StrategyModules renamed to Modules
+    - SecurityExchanges: got rid of the regular trading hours fields
+    - StocksMetadata: Get rid of the stock index flags (i.e. spy_component)
+
+### Deprecated
+- None
+
+### Removed
+- None
+
+### Fixed
+- None
+
+### Security
+- None
+
 ## [0.2.3]
 ### Added
 - Change Log
@@ -26,4 +49,4 @@ All notable changes to this project will be documented in this file.
 - Spelling mistakes in the SQL table scripts
 
 ### Security
-- 
+- None

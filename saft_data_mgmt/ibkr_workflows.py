@@ -34,7 +34,7 @@ class GetCoreInfo:
     def __init__(self, symbol:str, sec_type:str):
         self.sec_type = sec_type
         self.symbol = symbol
-        self.ib = ibu.ibkr_spinup()
+        self.ib = ib.ibkr_spinup()
         logging.info("Connected to IB for symbol %x of type %r.", self.symbol, self.sec_type)
 
 

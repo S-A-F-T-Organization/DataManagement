@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS StrategyModules(
+CREATE TABLE IF NOT EXISTS Modules(
     [module_id] INTEGER PRIMARY KEY,
     [strategy_id] INTEGER NOT NULL,
     [module_name] TEXT NOT NULL,

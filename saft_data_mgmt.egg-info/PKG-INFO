@@ -1,6 +1,6 @@
-Metadata-Version: 2.1
-Name: saft-data-mgmt
-Version: 0.2.4
+Metadata-Version: 2.2
+Name: saft_data_mgmt
+Version: 0.2.6
 Summary: A package for managing financial data, specifically made for algorithmic traders.
 Home-page: https://github.com/S-A-F-T-Organization/DataManagement
 Author: Travis Swiger
@@ -13,8 +13,22 @@ Classifier: Topic :: Database
 Classifier: Development Status :: 3 - Alpha
 Requires-Python: >=3.7
 Description-Content-Type: text/markdown
-Provides-Extra: dev
 License-File: LICENSE
+Requires-Dist: SQLAlchemy>=1.4
+Requires-Dist: PyYAML
+Provides-Extra: dev
+Requires-Dist: twine>=4.0.2; extra == "dev"
+Requires-Dist: build; extra == "dev"
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: provides-extra
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
 
 # DataManagement
 
