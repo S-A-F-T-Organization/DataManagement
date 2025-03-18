@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS SecurityPrices (
+CREATE TABLE IF NOT EXISTS SecurityPricesOHLCV (
     [ohlcv_id] INTEGER PRIMARY KEY,
     [symbol_id] INTEGER NOT NULL,
     [timestamp_utc_ms] INTEGER NOT NULL,
