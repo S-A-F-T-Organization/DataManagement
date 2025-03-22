@@ -1,141 +1,381 @@
 """
-Module: get_core_info.py
-
-This module uses ib_insync to connect to Interactive Brokers,
-qualify a contract based on a given symbol and security type,
-retrieve the contract details (including trading hours),
-and return a SecuritiesInfo dataclass instance containing
-the gathered information.
-
-The associated dataclasses and SQL table columns are:
-    - SecuritiesInfo
-    - SecurityTypes
-    - SecurityExchanges:
+This module defines the workflow for adding a new symbol to a SAFT database given
+the symbol and security type you would like to add
 """
-from typing import Tuple, Optional
+
 import logging
-from ib_insync import Contract
+from decimal import Decimal
 
-from saft_data_mgmt.Models.core_objects import SecuritiesInfo
+import pandas as pd
+from ib_insync import IB, BarDataList, Contract, ContractDetails, Forex
+from sqlalchemy import Engine, select, text
+from sqlalchemy.orm import Session
 
-# Enable logging if needed
-logging.basicConfig(level=logging.INFO)
+from saft_data_mgmt.models import (
+    AllCoreInfo,
+    SecuritiesInfo,
+    SecurityExchanges,
+    SecurityTypes,
+)
+from saft_data_mgmt.Utils.helpers import prep_data, setup_dev_engine, setup_prod_engine
 
-class GetCoreInfo:
+
+class AddCoreInfoWorkflow:
     """
-    _summary_
-    This module uses ib_insync to connect to Interactive Brokers,
-    qualify a contract based on a given symbol and security type,
-    retrieve the contract details (including trading hours),
-    and return a SecuritiesInfo dataclass instance containing
-    the gathered information.
+    This represents the workflow for adding a new symbol to the database given the
+    symbol and security type. The workflow is as follows:
+
+    1. Initialize: takes in the symbol, security type, whether or not it is in a
+    development environment, and the IBKR connection/interface object,
+    2. Runs checks on the symbol and security type to ensure it is in the correct format
+    3. Initializes the database engine according to the specified environment (dev or prod)
+    4. Creates a qualified contract with all of the necessary information
+    5. Creates an AllCoreInfo object to store all of the necessary values
+    6. Sets the symbol, security type, exchange, and exchange timezone values
+    7. Parses and sets the trading hours
+    8. Retrieves the exchange ID from the database and sets the exchange_id value
+        i. If it already exists in the database, it returns the exchange ID
+        ii. If it does not exist in the database, it inserts the exchange info into the database to create
+        the exchange ID, then retrieves the newly created ID
+    9. Retrieves the security type ID from the database and sets the security_type_id value
+        i. If it already exists in the database, it returns the security type ID
+        ii. If it does not exist in the database, it inserts the security type into the database to create
+        the security type ID, then retrieves the newly created ID
+    10. Calculates and sets the to_int value
+    11. Maps the values onto an instance of the SecuritiesInfo class
+    12. Inserts the values into the database
     """
 
-    def __init__(self, symbol:str, sec_type:str):
-        self.sec_type = sec_type
-        self.symbol = symbol
-        self.ib = ib.ibkr_spinup()
-        logging.info("Connected to IB for symbol %x of type %r.", self.symbol, self.sec_type)
+    def __init__(self, security_type: str, symbol: str, dev_flag: bool, ib: IB):
+        self.symbol = symbol.upper()
+        self.ib = ib
+        self.security_type_lower = security_type.lower()
+        self.dev_flag = dev_flag
 
-
-    def get_contract(self) -> Contract:
-        """Given a symbol and security type, create an appropriate IB contract."""
-        sec_type_upper = self.sec_type.upper()
-        contract = Contract()
-        contract.symbol = self.symbol
-        contract.secType = sec_type_upper
-        return contract
-
-
-    def parse_trading_hours(self, trading_hours:str) -> Tuple[Optional[str], Optional[str]]:
-        """
-        Parse the tradingHours string returned by IB to extract the RTH start and end times.
-        
-        IB usually returns a string like:
-        
-            "20250206:0930-1600;20250207:0930-1600;..."
-        
-        This function takes the first segment and extracts the start and end times.
-        
-        Returns a tuple (rth_start_time_utc, rth_end_time_utc) as strings (or (None, None) if parsing fails).
-        """
-        if not trading_hours:
-            return None, None
-
-        segment = trading_hours.split(';')[0]
+    @property
+    def security_type(self):
+        """Sets the security type attribute after normalizing and cleaning the input"""
         try:
-            # Expect a format like "YYYYMMDD:HHMM-HHMM"
-            _, times = segment.split(':')
-            start_time_str, end_time_str = times.split('-')
-            return start_time_str, end_time_str
-        except Exception:
-            logging.error("Error parsing trading hours %x", trading_hours, exc_info=True)
-            return None, None
+            if self.security_type_lower in [
+                "stk",
+                "stock",
+                "stocks",
+                "stks",
+                "etf",
+                "etfs",
+            ]:
+                return "STK"
+            if self.security_type_lower in ["fx", "forex", "cash"]:
+                return "CASH"
+            if self.security_type_lower in ["fut", "future", "futures"]:
+                return "FUT"
+            if self.security_type_lower in [
+                "fund",
+                "mutual fund",
+                "mutual_fund",
+            ]:
+                return "FUND"
+            raise ValueError("Invalid Security Type Received")
+        except Exception as e:
+            print(e)
+            raise
 
+    @property
+    def db_engine(self) -> Engine:
+        """Initializes the correct engine based on dev or prod flag"""
+        if self.dev_flag:
+            engine = setup_dev_engine()
+            return engine
+        engine = setup_prod_engine()
+        return engine
 
-    def get_security_info(self, contract) -> SecuritiesInfo:
+    def get_qualified_contract(self) -> Contract:
+        """Takes in the contract information and returns a qualified contract"""
+        new_contract = Contract()
+        new_contract.symbol = self.symbol
+        new_contract.secType = self.security_type
+        if self.security_type != "CASH":
+            new_contract.currency = "USD"
+        if self.security_type == "CASH":
+            new_contract = Forex(pair=self.symbol)
+        try:
+            contract_list = self.ib.reqContractDetails(contract=new_contract)
+            qualified_contract = self.ib.qualifyContracts(contract_list[0].contract)
+            if not qualified_contract:
+                raise ValueError(f"Could not qualify contract for {self.symbol}")
+            qual_contract = qualified_contract[0]
+            return qual_contract
+        except Exception as e:
+            logging.error("Error qualifying contract: %s", e)
+            raise
+
+    def insert_exchange_info(self, core_info: AllCoreInfo):
         """
-        Connect to IB, qualify a contract for the given symbol and security type,
-        retrieve its contract details (including trading hours), and return a
-        SecuritiesInfo dataclass with the gathered data.
-        
-        Note:
-        - security_type_id and exchange_id are populated with the security type and exchange
-            strings returned by IB. Mapping these to integer IDs (as in your SQL tables)
-            is assumed to be handled elsewhere.
-        - The "to_int" field is ignored.
-        """
-        qualified_contracts = self.ib.qualifyContracts(contract)
-        # TODO: Change this to a warning and continue
-        if not qualified_contracts:
-            raise ValueError(f"Could not qualify contract for symbol {self.symbol} with type {self.sec_type}.")
-        qualified_contract = qualified_contracts[0]
-        logging.info("Qualified contract: %x", qualified_contract)
+        Inserts exchange information into the SecurityExchanges table.
 
-        # Request contract details (to get trading hours, etc.)
+        Parameters:
+            core_info (AllCoreInfo): An object containing exchange details, including:
+                - exchange_name: The name of the exchange.
+                - exchange_tz: The local timezone of the exchange.
+
+        Raises:
+            Exception: Raises any exception that occurs during the insert and rolls back the transaction
+        """
+        exchange_name = core_info.exchange_name
+        exchange_tz = core_info.exchange_tz
+
+        with self.db_engine.connect() as conn:
+            transaction = conn.begin()
+            try:
+                query = text(
+                    """
+                    INSERT INTO SecurityExchanges 
+                    (exchange_name, local_timezone)
+                    VALUES (:exchange_name, :exchange_tz)
+                    """
+                )
+                conn.execute(
+                    query,
+                    {"exchange_name": exchange_name, "exchange_tz": exchange_tz},
+                )
+                transaction.commit()
+            except Exception:
+                transaction.rollback()
+                raise
+
+    def get_exchange_id(self, core_info: AllCoreInfo) -> int:
+        """
+        Gets the exchange id of the specified exchange from the SecurityExchanges table.
+
+        If the exchange is not already in the database, then it will attempt toinsert the exchange details and
+        select from it again. If this fails it will raise an error
+
+        Parameters:
+            core_info (AllCoreInfo): An object containing exchange details, including:
+                - exchange_name (str): The name of the exchange.
+                - exchange_tz (str): The local timezone of the exchange.
+                - rth_start_time_utc (str): The regular trading hours start time (in UTC).
+                - rth_end_time_utc (str): The regular trading hours end time (in UTC).
+
+        Returns:
+            exchange_id (int): the exchange id of the given exchange
+
+        Raises:
+            Exception: Raises any exception that occurs during the insert and rolls back the transaction
+        """
+
+        stmt = select(SecurityExchanges).where(SecurityExchanges.exchange_name == core_info.exchange_name)
+        with Session(self.db_engine) as session:
+            session.begin()
+            try:
+                result = session.execute(stmt).first()
+
+                if result:  # Check if result exists
+                    exchange_id = result[0].exchange_id
+                    return exchange_id
+
+                # If no result, insert and try again
+                self.insert_exchange_info(core_info=core_info)
+                result = session.execute(stmt).first()
+                if result:
+                    exchange_id = result[0].exchange_id
+                    return exchange_id
+
+                raise RuntimeError("Could not insert or retrieve exchange info")
+            except Exception as e:
+                logging.error("Error inserting exchange info: %s", e)
+                raise
+
+    def insert_security_type(self, core_info: AllCoreInfo) -> None:
+        """
+        Inserts new security type information into the SecurityTypes table
+
+        Params:
+            core_info (AllCoreInfo):
+                - security_type (str): the name of the security type
+        Returns:
+            None
+        """
+        security_type = core_info.security_type
+        with self.db_engine.connect() as conn:
+            transaction = conn.begin()
+            try:
+                query = text(
+                    """
+                    INSERT INTO SecurityTypes
+                    (security_type)
+                    VALUES (:security_type)
+                    """
+                )
+                conn.execute(query, {"security_type": security_type})
+                transaction.commit()
+            except Exception as e:
+                transaction.rollback()
+                logging.error("Error inserting security type: %s", e)
+                raise
+
+    def get_sec_type_id(self, core_info: AllCoreInfo) -> int:
+        """
+        Retrieves the security type info from the SecurityTypes table.
+
+        If no record exists for the specified security_type, this function calls `insert_security_type` to
+        add a new record, and then retrieves the inserted record.
+
+        Parameters:
+            core_info (AllCoreInfo): An object containing exchange details. It must include:
+                - security_type (str): The name of the security type
+
+        Returns:
+            sec_type_id (int): The information for the given exchange from the SecurityExchanges table
+
+        Raises:
+            Exception: Propagates any database-related exception encountered during the process.
+        """
+        stmt = select(SecurityTypes).where(
+            SecurityTypes.security_type == core_info.security_type
+        )
+        with Session(self.db_engine) as session:
+            try:
+                with session.begin():
+                    result: list[SecurityTypes] = session.execute(stmt).first()
+                    if result:
+                        return result[0].security_type_id
+
+                    self.insert_security_type(core_info=core_info)
+                    result = session.execute(stmt).first()
+                    if result:
+                        return result[0].security_type_id
+
+                    raise RuntimeError(
+                        "Could not insert or retrieve security type info"
+                    )
+            except Exception as e:
+                logging.error("Error getting security type ID: %s", e)
+                raise
+
+    def get_price_data(self, qualified_contract: Contract) -> BarDataList:
+        """
+        Gets the price data for the last 5 days to find the to_int value
+
+        Args:
+        - qualified_contract (Contract): The qualified contract of the security you are adding
+
+        Returns:
+        - price_data (DataFrame): A DataFrame of the price data
+        """
+        bars = self.ib.reqHistoricalData(
+            qualified_contract,
+            endDateTime="",
+            durationStr="5 D",
+            barSizeSetting="2 mins",
+            whatToShow="TRADES",
+            useRTH=False,
+        )
+        price_data = prep_data(ticker=qualified_contract.symbol, candles=bars)
+        return price_data
+
+    def to_int_value_from_price(self, price_data: pd.DataFrame) -> int:
+        """
+        Determine how many factors of 10 are needed to convert security prices to integer form.
+        Scans the 'Open', 'High', 'Low', and 'Close' columns for decimal precision and returns
+        the maximum number of decimal places found.
+
+        Args:
+            price_data (BarDataList): an ibkr object of the price data
+
+        Returns:
+            int: The maximum decimal precision across the four price columns.
+        """
+        price_columns = ["Open", "High", "Low", "Close"]
+        decimal_places_df = price_data[price_columns].map(
+            lambda x: max(-Decimal(str(x)).as_tuple().exponent, 0)
+        )
+        to_int = decimal_places_df.max().max()
+        return to_int
+
+    def to_int_from_details(self, details: ContractDetails) -> int:
+        """
+        Uses the min_tick attribute in the contract details to calculate the to_int value. If there
+        are no decimals in the min tick attribute, it returns 1
+
+        Args:
+            detail (ContractDetails): _description_
+        Returns:
+            to_int (int): The powers of base 10 to multiply the price by to get it into an integer
+        """
+        if details.minTick >= 1.0:
+            return 0
+        min_tick = str(details.minTick)
+        if "." in min_tick:
+            decimal_places = min_tick.split(".")[-1]
+            to_int = len(decimal_places)
+            return to_int
+        return 1
+
+    def set_details(self, qualified_contract: Contract) -> AllCoreInfo:
+        """Sets all of the core symbol info"""
+        core_info = AllCoreInfo()
         details_list = self.ib.reqContractDetails(qualified_contract)
         if details_list:
             details = details_list[0]
-            trading_hours = details.tradingHours
-            rth_start, rth_end = self.parse_trading_hours(trading_hours)
-            logging.info("Parsed trading hours: start=%x, end=%r", rth_start, rth_end)
-        else:
-            rth_start, rth_end = None, None
-            logging.warning("No contract details found for %x of security type %r.", self.symbol, self.sec_type)
+            core_info.symbol = self.symbol
+            if self.security_type == "CASH":
+                core_info.symbol = details.marketName
+            core_info.exchange_name = qualified_contract.primaryExchange
+            if (
+                len(qualified_contract.primaryExchange) == 0
+            ):  # If there is no primary exchange listed, .exchange
+                core_info.exchange_name = qualified_contract.exchange
+            core_info.security_type = self.security_type
+            if self.security_type_lower == "etf":
+                core_info.security_type = "ETF"
+            core_info.exchange_tz = details.timeZoneId
+            core_info.exchange_id = self.get_exchange_id(core_info=core_info)
+            core_info.sec_type_id = self.get_sec_type_id(core_info=core_info)
+            core_info.to_int = self.to_int_from_details(details=details)
+            return core_info
 
-        # Build and return the SecuritiesInfo dataclass.
-        # TODO: For now, security_type_id and exchange_id are stored as the raw values (strings).
+    def insert_symbol_info(self, core_info: AllCoreInfo) -> None:
+        """Maps the core_info class onto a SecuritiesInfo class and inserts it into the database."""
         sec_info = SecuritiesInfo(
-            symbol=self.symbol,
-            security_type_id=self.sec_type,
-            exchange_id=qualified_contract.exchange,
-            rth_start_time_utc=rth_start,
-            rth_end_time_utc=rth_end
+            symbol=core_info.symbol,
+            exchange_id=core_info.exchange_id,
+            security_type_id=core_info.sec_type_id,
+            to_int=core_info.to_int,
         )
-        return sec_info
 
-    def get_exchange_timezone(self, contract) -> str:
-        """Placeholder"""
-        contract = Contract(self.symbol, self.sec_type)
-        qualified_contracts = self.ib.qualifyContracts(contract)
-        if not qualified_contracts:
-            raise ValueError(f"Could not qualify contract for {self.symbol}")
+        with Session(self.db_engine) as session:
+            transaction = session.begin()
+            try:
+                # Check if symbol already exists
+                existing = (
+                    session.query(SecuritiesInfo)
+                    .filter_by(
+                        symbol=core_info.symbol, security_type_id=core_info.sec_type_id
+                    )
+                    .first()
+                )
+                if existing:
+                    logging.info(
+                        "Symbol %s already exists in database, skipping insert",
+                        core_info.symbol,
+                    )
+                    return
 
-        # Get the first qualified contract
-        qualified_contract = qualified_contracts[0]
+                session.add(sec_info)
+                session.commit()
+                return
+            except Exception as e:
+                transaction.rollback()
+                raise e
 
-        # Request the contract details
-        contract_details = self.ib.reqContractDetails(qualified_contract)
-        if not contract_details:
-            raise ValueError(f"No contract details found for {self.symbol}")
-
-        # timeZoneId is the attribute that shows the exchange's timezone
-        timezone = contract_details[0].timeZoneId
-        return timezone
-
-    def sec_info_main(self):
-        """Place Holder"""
-        contract = self.get_contract()
-        sec_info = self.get_security_info(contract=contract)
-        time_zone = self.get_exchange_timezone(contract=contract)
-        return sec_info, time_zone
+    def main(self) -> None:
+        """
+        Performs the workflow as defined by the class docstrings
+        1. creates the qualified contract
+        2. sets the core_info values
+        3. inserts the values into the database
+        """
+        qualified_contract = self.get_qualified_contract()
+        concrete_info = self.set_details(qualified_contract=qualified_contract)
+        self.insert_symbol_info(core_info=concrete_info)

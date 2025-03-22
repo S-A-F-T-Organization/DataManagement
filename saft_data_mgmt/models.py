@@ -3,21 +3,28 @@ This module contains all of the relevant data models including the SQL data tabl
 predefined joins that are useful for many workflows.
 """
 
+from dataclasses import dataclass
+
+from ib_insync import ContractDetails
 from sqlalchemy import (
     Column,
+    Engine,
     Float,
     ForeignKey,
     Integer,
     SmallInteger,
     String,
     UniqueConstraint,
+    select,
 )
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy.orm import DeclarativeBase, Session, declarative_base, relationship
+
+from saft_data_mgmt.Utils.helpers import get_obs_pk, get_obs_uk
 
 Base = declarative_base()
 
 # ----------------------------------------------------------------#
-#                       Core Tables                              #
+#                       Core Tables                               #
 # ----------------------------------------------------------------#
 
 
@@ -78,6 +85,24 @@ class SecuritiesInfo(Base):
 
     def __repr__(self):
         return f"Security(id={self.symbol_id}, symbol={self.symbol})"
+
+    @classmethod
+    def from_uks(
+        cls, db_engine: Engine, symbol: str, sec_type: str
+    ) -> "SecuritiesInfo":
+        sec_type_stmt = select(SecurityTypes).where(
+            SecurityTypes.security_type == sec_type
+        )
+
+        with Session(bind=db_engine) as session:
+            session.begin()
+            sec_type: SecurityTypes = session.execute(sec_type_stmt).fetchone()[0]
+            sec_info_stmt = select(SecuritiesInfo).where(
+                SecuritiesInfo.security_type_id == sec_type.security_type_id,
+                SecuritiesInfo.symbol == symbol,
+            )
+            sec_info: SecuritiesInfo = session.execute(sec_info_stmt).fetchone()[0]
+            return sec_info
 
 
 # ----------------------------------------------------------------#
@@ -361,6 +386,37 @@ class StockMetadata(Base):
     def __repr__(self):
         return f"StockMetadata(symbol_id={self.symbol_id}, full_name={self.full_name})"
 
+    @classmethod
+    def from_contract_details(
+        cls,
+        db_engine: Engine,
+        symbol_id: int,
+        details: ContractDetails,
+    ) -> "StockMetadata":
+        """
+        Constructs an instance of StockMetadata using the contract details
+
+        Args:
+            details (ContractDetails): the IBKR contract details
+            symbol_id (int): The primary key for the symbol in the `SecuritiesInfo` table
+            db_engine (Engine): engine to connect to the database to retrieve foreign key identifiers
+
+        Returns:
+            StockMetadata: a constructed instance of StockMetadata
+        """
+        sector_id = get_obs_uk(
+            db_engine=db_engine, cls=SectorInfo, sector_name=details.category
+        )
+        industry_id = get_obs_uk(
+            db_engine=db_engine, cls=IndustryInfo, industry_name=details.industry
+        )
+        return cls(
+            symbol_id=symbol_id,
+            sector_id=sector_id,
+            industry_id=industry_id,
+            full_name=details.longName,
+        )
+
 
 class SectorInfo(Base):
     """Represents the SectorInfo table."""
@@ -371,6 +427,23 @@ class SectorInfo(Base):
 
     def __repr__(self):
         return f"SectorInfo(id={self.sector_id}, name={self.sector_name})"
+
+    @classmethod
+    def from_contract_details(
+        cls,
+        db_engine: Engine,
+        details: ContractDetails,
+    ) -> "SectorInfo":
+        """
+        Constructs an instance of SectorInfo using the contract details
+
+        Args:
+            details (ContractDetails): the IBKR contract details
+            db_engine (Engine): engine to connect to the database to retrieve foreign key identifiers
+
+        Returns:
+            SectorInfo: a constructed instance of SectorInfo
+        """
 
 
 class MutualFundSnapshots(Base):
@@ -414,6 +487,36 @@ class FuturesMetadata(Base):
     def __repr__(self):
         return f"FuturesMetadata(symbol_id={self.symbol_id}, underlying_asset_name={self.underlying_asset_name})"
 
+    @classmethod
+    def from_contract_details(
+        cls, db_engine: Engine, details: ContractDetails, symbol_id: int
+    ) -> "FuturesMetadata":
+        """
+        Constructs an instance of ETFMetadata from the IBKR contract details
+
+        Args:
+            details (ContractDetails): the IBKR contract details
+            symbol_id (int): The primary key for the symbol in the `SecuritiesInfo` table
+            db_engine (Engine): engine to connect to the database to retrieve foreign key identifiers
+
+        Returns:
+            ETFMetadata: a constructed instance of ETFMetadata
+        """
+        underlying_type_id = get_obs_uk(
+            db_engine=db_engine,
+            cls=UnderlyingAssetTypes,
+            underlying_name=details.category,
+        )
+        min_tick_val = details.contract.multiplier * details.minTick
+        return cls(
+            symbol_id=symbol_id,
+            multiplier=details.contract.multiplier,
+            min_tick_size=details.minTick,
+            min_tick_value=min_tick_val,
+            underlying_type_id=underlying_type_id,
+            underlying_name=details.subcategory,
+        )
+
 
 class FundamentalsSnapshots(Base):
     """Represents the FundamentalsSnapshots table."""
@@ -449,6 +552,33 @@ class ETFMetadata(Base):
 
     def __repr__(self):
         return f"ETFMetadata(symbol_id={self.symbol_id}, full_name={self.full_name})"
+
+    @classmethod
+    def from_contract_details(
+        cls, db_engine: Engine, details: ContractDetails, symbol_id: int
+    ) -> "ETFMetadata":
+        """
+        Constructs an instance of ETFMetadata from the IBKR contract details
+
+        Args:
+            details (ContractDetails): the IBKR contract details
+            symbol_id (int): The primary key for the symbol in the `SecuritiesInfo` table
+            db_engine (Engine): engine to connect to the database to retrieve foreign key identifiers
+
+        Returns:
+            ETFMetadata: a constructed instance of ETFMetadata
+        """
+        underlying_type_id = get_obs_uk(
+            db_engine=db_engine,
+            cls=UnderlyingAssetTypes,
+            underlying_name=details.category,
+        )
+        return cls(
+            symbol_id=symbol_id,
+            full_name=details.longName,
+            underlying_asset_type_id=underlying_type_id,
+            underlying_asset_name=details.subcategory,
+        )
 
 
 class EquitiesSnapshots(Base):
@@ -780,3 +910,128 @@ class Models(Base):
 
     def __repr__(self):
         return f"Models(id={self.model_id}, name={self.model_name})"
+
+
+@dataclass
+class AllCoreInfo:
+    """A dataclass representing an observation in the SecuritiesInfo table in the database"""
+
+    # IDs
+    symbol_id: int = None
+    exchange_id: int = None
+    sec_type_id: int = None
+
+    # Values
+    ## SecuritiesInfo
+    symbol: str = None
+    to_int: int = None
+    ## SecurityExchanges
+    exchange_name: str = None
+    exchange_tz: str = None
+    ##SecurityTypes
+    security_type: str = None
+
+    @classmethod
+    def from_db_models(
+        cls,
+        security_info: SecuritiesInfo,
+        exchange: SecurityExchanges,
+        security_type: SecurityTypes,
+    ) -> "AllCoreInfo":
+        """
+        Creates an AllCoreInfo instance from database model instances.
+
+        Args:
+            security_info (SecuritiesInfo): SecuritiesInfo database model instance
+            exchange (SecurityExchanges): SecurityExchanges database model instance
+            security_type (SecurityType): SecurityType database model instance
+
+        Returns:
+            AllCoreInfo: A populated instance containing all core information
+        """
+        return cls(
+            # IDs
+            symbol_id=security_info.symbol_id,
+            exchange_id=security_info.exchange_id,
+            sec_type_id=security_info.security_type_id,
+            # SecuritiesInfo values
+            symbol=security_info.symbol,
+            to_int=security_info.to_int,
+            # Exchange values
+            exchange_name=exchange.exchange_name,
+            exchange_tz=exchange.local_timezone,
+            # SecurityType values
+            security_type=security_type.security_type,
+        )
+
+    @classmethod
+    def from_core_uks(
+        cls, symbol: str, sec_type: str, db_engine: Engine
+    ) -> "AllCoreInfo":
+        """
+        Takes in the unique constraints of the security you want info on and creates an all core info
+        object containing all of the info.
+
+        Args:
+            symbol (str): the symbol of the security you want to generate a contract for
+            sec_type (str): the security type
+            db_engine (Engine): an engine object you want to use to connect to your data base
+
+        Returns:
+            AllCoreInfo: A dataclass representing an observation in the SecuritiesInfo table in the database
+        """
+        sec_type_info: SecurityTypes = get_obs_uk(
+            db_engine=db_engine, cls=SecurityTypes, security_type=sec_type
+        )
+        sec_type_id = sec_type_info.security_type_id
+        core_info: SecuritiesInfo = get_obs_uk(
+            db_engine=db_engine,
+            cls=SecuritiesInfo,
+            security_type_id=sec_type_id,
+            symbol=symbol,
+        )
+        exchange_info: SecurityExchanges = get_obs_pk(
+            db_engine=db_engine, cls=SecurityExchanges, pk=core_info.exchange_id
+        )
+        all_core_info: AllCoreInfo = cls.from_db_models(
+            security_info=core_info, exchange=exchange_info, security_type=sec_type_info
+        )
+        return all_core_info
+
+    @classmethod
+    def from_sec_info(cls, sec_info: SecuritiesInfo, db_engine):
+        sec_type_info: SecurityTypes = get_obs_pk(
+            db_engine=db_engine,
+            cls=SecurityTypes,
+            pk=sec_info.security_type_id,
+        )
+        exchange_info: SecurityExchanges = get_obs_pk(
+            db_engine=db_engine, cls=SecurityExchanges, pk=sec_info.exchange_id
+        )
+        all_core_info: AllCoreInfo = cls.from_db_models(
+            security_info=sec_info, exchange=exchange_info, security_type=sec_type_info
+        )
+        return all_core_info
+
+
+class SecurityMetadata:
+    """
+    This class is responsible for getting all necessary metadata of a security given it's symbol and security type.
+    Using the unique keys `symbol` and `security_type`, it creates an instance of `SecuritiesInfo` and joins it
+    with the related metadata table
+    """
+
+    def __init__(self, db_engine: Engine, symbol: str, sec_type: str):
+        self.sec_type = sec_type
+        self.symbol = symbol
+        self.db_engine = db_engine
+
+    def get_info(self, metadata_table: DeclarativeBase):
+        sec_info = SecuritiesInfo().from_uks(
+            db_engine=self.db_engine, symbol=self.symbol, sec_type=self.sec_type
+        )
+        join_stmt = select(sec_info).join(metadata_table)
+        with Session(bind=self.db_engine) as session:
+            session.begin()
+            result = session.execute(join_stmt).fetchone()[0]
+            return result
