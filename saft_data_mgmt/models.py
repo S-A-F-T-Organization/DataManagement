@@ -3,8 +3,11 @@ This module contains all of the relevant data models including the SQL data tabl
 predefined joins that are useful for many workflows.
 """
 
+import time
 from dataclasses import dataclass
+from typing import Callable
 
+import pandas as pd
 from ib_insync import ContractDetails
 from sqlalchemy import (
     Column,
@@ -15,11 +18,12 @@ from sqlalchemy import (
     SmallInteger,
     String,
     UniqueConstraint,
+    func,
     select,
 )
 from sqlalchemy.orm import DeclarativeBase, Session, declarative_base, relationship
 
-from saft_data_mgmt.Utils.helpers import get_obs_pk, get_obs_uk
+from saft_data_mgmt.Utils.helpers import get_obs_pk, get_obs_uk, insert_new_instance
 
 Base = declarative_base()
 
@@ -103,6 +107,130 @@ class SecuritiesInfo(Base):
             )
             sec_info: SecuritiesInfo = session.execute(sec_info_stmt).fetchone()[0]
             return sec_info
+    
+@dataclass
+class AllCoreInfo:
+    """A dataclass representing an observation in the SecuritiesInfo table in the database"""
+
+    # IDs
+    symbol_id: int = None
+    exchange_id: int = None
+    sec_type_id: int = None
+
+    # Values
+    ## SecuritiesInfo
+    symbol: str = None
+    to_int: int = None
+    ## SecurityExchanges
+    exchange_name: str = None
+    exchange_tz: str = None
+    ##SecurityTypes
+    security_type: str = None
+
+    @classmethod
+    def from_db_models(
+        cls,
+        security_info: SecuritiesInfo,
+        exchange: SecurityExchanges,
+        security_type: SecurityTypes,
+    ) -> "AllCoreInfo":
+        """
+        Creates an AllCoreInfo instance from database model instances.
+
+        Args:
+            security_info (SecuritiesInfo): SecuritiesInfo database model instance
+            exchange (SecurityExchanges): SecurityExchanges database model instance
+            security_type (SecurityType): SecurityType database model instance
+
+        Returns:
+            AllCoreInfo: A populated instance containing all core information
+        """
+        return cls(
+            # IDs
+            symbol_id=security_info.symbol_id,
+            exchange_id=security_info.exchange_id,
+            sec_type_id=security_info.security_type_id,
+            # SecuritiesInfo values
+            symbol=security_info.symbol,
+            to_int=security_info.to_int,
+            # Exchange values
+            exchange_name=exchange.exchange_name,
+            exchange_tz=exchange.local_timezone,
+            # SecurityType values
+            security_type=security_type.security_type,
+        )
+
+    @classmethod
+    def from_core_uks(
+        cls, symbol: str, sec_type: str, db_engine: Engine
+    ) -> "AllCoreInfo":
+        """
+        Takes in the unique constraints of the security you want info on and creates an all core info
+        object containing all of the info.
+
+        Args:
+            symbol (str): the symbol of the security you want to generate a contract for
+            sec_type (str): the security type
+            db_engine (Engine): an engine object you want to use to connect to your data base
+
+        Returns:
+            AllCoreInfo: A dataclass representing an observation in the SecuritiesInfo table in the database
+        """
+        sec_type_info: SecurityTypes = get_obs_uk(
+            db_engine=db_engine, cls=SecurityTypes, security_type=sec_type
+        )
+        sec_type_id = sec_type_info.security_type_id
+        core_info: SecuritiesInfo = get_obs_uk(
+            db_engine=db_engine,
+            cls=SecuritiesInfo,
+            security_type_id=sec_type_id,
+            symbol=symbol,
+        )
+        exchange_info: SecurityExchanges = get_obs_pk(
+            db_engine=db_engine, cls=SecurityExchanges, pk=core_info.exchange_id
+        )
+        all_core_info: AllCoreInfo = cls.from_db_models(
+            security_info=core_info, exchange=exchange_info, security_type=sec_type_info
+        )
+        return all_core_info
+
+    @classmethod
+    def from_sec_info(cls, sec_info: SecuritiesInfo, db_engine):
+        sec_type_info: SecurityTypes = get_obs_pk(
+            db_engine=db_engine,
+            cls=SecurityTypes,
+            pk=sec_info.security_type_id,
+        )
+        exchange_info: SecurityExchanges = get_obs_pk(
+            db_engine=db_engine, cls=SecurityExchanges, pk=sec_info.exchange_id
+        )
+        all_core_info: AllCoreInfo = cls.from_db_models(
+            security_info=sec_info, exchange=exchange_info, security_type=sec_type_info
+        )
+        return all_core_info
+
+
+class SecurityMetadata:
+    """
+    This class is responsible for getting all necessary metadata of a security given it's symbol and security type.
+    Using the unique keys `symbol` and `security_type`, it creates an instance of `SecuritiesInfo` and joins it
+    with the related metadata table
+    """
+
+    def __init__(self, db_engine: Engine, symbol: str, sec_type: str):
+        self.sec_type = sec_type
+        self.symbol = symbol
+        self.db_engine = db_engine
+
+    def get_info(self, metadata_table: DeclarativeBase):
+        sec_info = SecuritiesInfo().from_uks(
+            db_engine=self.db_engine, symbol=self.symbol, sec_type=self.sec_type
+        )
+        join_stmt = select(sec_info).join(metadata_table)
+        with Session(bind=self.db_engine) as session:
+            session.begin()
+            result = session.execute(join_stmt).fetchone()[0]
+            return result
 
 
 # ----------------------------------------------------------------#
@@ -638,13 +766,57 @@ class AccountInfo(Base):
 
     __tablename__ = "AccountInfo"
     account_id = Column(Integer, primary_key=True)
+    account_brokerage = Column(String(50))
+    account_id_brokerage = Column(String(50))
     account_start_timestamp_utc_sec = Column(Integer)
     account_start_value = Column(Float)
     account_alias = Column(String(150), unique=True)
     paper_trade_flag = Column(Integer)
 
+    __table_args__ = (
+        UniqueConstraint(
+            "account_brokerage",
+            "account_id_brokerage",
+            "account_start_timestamp_utc_sec",
+            name="uix_account_info_details",
+        ),
+        UniqueConstraint("account_alias", name="account_info_alias"),
+    )
+
     def __repr__(self):
         return f"AccountInfo(id={self.account_id}, alias={self.account_alias})"
+
+    @classmethod
+    def from_config(cls, db_engine: Engine, config_info: dict) -> "AccountInfo":
+        """
+        Generates an account
+
+        Args:
+            config_info (dict): _description_
+
+        Returns:
+            AccountInfo: _description_
+        """
+        account_info = get_obs_uk(
+            db_engine=db_engine, cls=cls, account_alias=config_info.get("account_alias")
+        )
+        if not account_info:
+            account_info = cls(
+                account_id=None,
+                account_id_brokerage=config_info.get("account_id_brokerage"),
+                account_brokerage=config_info.get("account_brokerage"),
+                account_start_timestamp_utc=config_info.get("account_start_timestamp_utc"),
+                account_start_value=config_info.get("account_start_value"),
+                account_alias=config_info.get("account_alias"),
+                paper_trade_flag=config_info.get("paper_trade_flag"),
+            )
+            insert_new_instance(db_engine=db_engine, cls=cls)
+            account_info = get_obs_uk(
+                db_engine=db_engine,
+                cls=cls,
+                account_alias=config_info.get("account_alias"),
+            )
+        return account_info
 
 
 class OrderTypes(Base):
@@ -696,7 +868,7 @@ class Transactions(Base):
         return f"Transactions(id={self.transaction_id}, value={self.transaction_value})"
 
 
-class Sessions(Base):
+class SessionInfo(Base):
     """Represents the Sessions table."""
 
     __tablename__ = "Sessions"
@@ -706,6 +878,34 @@ class Sessions(Base):
 
     def __repr__(self):
         return f"Sessions(id={self.session_id})"
+
+    @classmethod
+    def create_new_session(cls, db_engine: Engine) -> "SessionInfo":
+        """
+        Creates a new Sessions instance by selecting the max session ID from the database,
+        incrementing it by 1, and creating the start timestamp. If the table is empty,
+        it returns a session_id of 1. The timestamp is in UTC and milliseconds, and the
+        end timestamp is None.
+
+        Args:
+            db_engine (Engine): The database engine to use for the connection.
+
+        Returns:
+            Sessions: A new Sessions instance.
+        """
+
+        with Session(bind=db_engine) as session:
+            session.begin()
+            max_session_id = session.query(func.max(cls.session_id)).scalar()
+            new_session_id = 1 if max_session_id is None else max_session_id + 1
+            current_timestamp_utc_ms = int(time.time() * 1000)
+            new_session = cls(
+                session_id=new_session_id,
+                created_timestamp_utc_ms=current_timestamp_utc_ms,
+                ended_timestamp_utc_ms=None,
+            )
+            session.close()
+            return new_session
 
 
 class Strategies(Base):
@@ -725,22 +925,41 @@ class Strategies(Base):
 
     def __repr__(self):
         return f"Strategies(id={self.strategy_id}, name={self.strategy_name})"
+    
+    @classmethod
+    def from_config(cls, db_engine: Engine, config_dict: dict) -> "Strategies":
+        """
+        Generates a Strategies instance using the info in the config file. If a strategy
+        does not exist in the database with the specified name and version, then it creates
+        a new instance, adds it to the table, then returns the instance
 
+        Args:
+            config_info (dict): _description_
 
-class Modules(Base):
-    """Represents the Modules table."""
-
-    __tablename__ = "Modules"
-    module_id = Column(Integer, primary_key=True)
-    strategy_id = Column(Integer, ForeignKey("Strategies.strategy_id"), nullable=False)
-    module_name = Column(String(100), nullable=False)
-
-    __table_args__ = (
-        UniqueConstraint("strategy_id", "module_name", name="uix_strategy_module"),
-    )
-
-    def __repr__(self):
-        return f"Modules(id={self.module_id}, module_name={self.module_name})"
+        Returns:
+            AccountInfo: _description_
+        """
+        config_info:dict = config_dict.get("strategy_info")
+        strat = get_obs_uk(
+            db_engine=db_engine,
+            cls=cls,
+            strategy_name=config_info.get("strategy_name"),
+            strategy_version=config_info.get("strategy_version")
+            )
+        
+        if not strat:
+            with Session(bind=db_engine) as session:
+                session.begin()
+                max_strat_id = session.query(func.max(cls.strategy_id)).scalar()
+                new_strat_id = 1 if max_strat_id is None else max_strat_id + 1
+           
+                strat = cls(
+                    strategy_id = new_strat_id,
+                    strategy_name = config_info.get("strategy_name"),
+                    strategy_version = config_info.get("strategy_version"),
+                    strategy_description = config_info.get("strategy_description")
+                    )
+                session.add(strat)
 
 
 class Inferences(Base):
@@ -751,7 +970,6 @@ class Inferences(Base):
     symbol_id = Column(Integer, ForeignKey("SecuritiesInfo.symbol_id"))
     strategy_id = Column(Integer, ForeignKey("Strategies.strategy_id"))
     session_id = Column(Integer, ForeignKey("Sessions.session_id"))
-    inference_outputs = Column(Integer)
     inference_start_timestamp_utc_ms = Column(Integer)
     inference_end_timestamp_utc_ms = Column(Integer)
     candle_reference_timestamp_utc_sec = Column(Integer)
@@ -768,7 +986,65 @@ class Inferences(Base):
 
     def __repr__(self):
         return f"Inferences(id={self.inference_id})"
+    
+    @classmethod
+    def new_inference(cls, symbol_info:AllCoreInfo, price_df:pd.DataFrame, inference_df) -> "Inferences":
+        return cls
+        
+class InferenceSteps(Base):
+    """Represents the InferenceSteps table."""
 
+    __tablename__ = "InferenceSteps"
+    inference_step_id = Column(Integer, primary_key=True)
+    module_name = Column(String(50), nullable=True)
+    step_name = Column(String(100), nullable=True)
+    strategy_id = Column(Integer, ForeignKey("Strategies.strategy_id"))
+
+    __table_args__ = (
+        UniqueConstraint("module_name", "step_name", name="uix_module_step"),
+    )
+
+    def __repr__(self):
+        return f"InferenceSteps(id={self.inference_step_id}, name={self.step_name})"
+    
+    @classmethod
+    def add_new_inference_step(cls, step: Callable, strat: Strategies, db_engine: Engine) -> "InferenceSteps":
+        """
+        Creates a new instance of InferenceSteps for a new inference step, adds it to the database,
+        and returns the created inference step. If an entry with the same module and step name already
+        exists (based on the unique constraint), the insert is ignored and the existing instance is returned.
+
+        Args:
+            step (Callable): The function representing the inference step.
+            strat (Strategies): The strategy for which the inference step is being added.
+            db_engine (Engine): The database engine to use for the connection.
+        
+        Returns:
+            InferenceSteps: The newly created or existing InferenceSteps instance.
+        """
+        module_name = step.__module__
+        step_name = step.__name__
+        
+        with Session(bind=db_engine) as session:
+            session.begin()
+            # Check if an entry already exists
+            existing_step = session.query(cls).filter(
+                cls.module_name == module_name,
+                cls.step_name == step_name
+            ).first()
+            
+            if existing_step:
+                session.commit()
+                return existing_step
+            
+            new_step = cls(
+                module_name=module_name,
+                step_name=step_name,
+                strategy_id=strat.strategy_id
+            )
+            session.add(new_step)
+            session.commit()
+            return new_step
 
 class InferenceTimes(Base):
     """Represents the inference_times table."""
@@ -790,23 +1066,6 @@ class InferenceTimes(Base):
 
     def __repr__(self):
         return f"InferenceTimes(id={self.inference_step_timing_id})"
-
-
-class InferenceSteps(Base):
-    """Represents the InferenceSteps table."""
-
-    __tablename__ = "InferenceSteps"
-    inference_step_id = Column(Integer, primary_key=True)
-    module_id = Column(Integer, ForeignKey("Modules.module_id"), nullable=False)
-    step_name = Column(String(100), nullable=False)
-
-    __table_args__ = (
-        UniqueConstraint("module_id", "step_name", name="uix_module_step"),
-    )
-
-    def __repr__(self):
-        return f"InferenceSteps(id={self.inference_step_id}, name={self.step_name})"
-
 
 class AllOrders(Base):
     """Represents the AllOrders table."""
@@ -861,177 +1120,3 @@ class ExecutedOrdersTable(Base):
 
     def __repr__(self):
         return f"ExecutedOrdersTable(order_id={self.order_id})"
-
-
-class ModelLibraries(Base):
-    """Represents the ModelLibraries table."""
-
-    __tablename__ = "ModelLibraries"
-    model_library_id = Column(Integer, primary_key=True)
-    model_library = Column(String(100), nullable=False, unique=True)
-
-    def __repr__(self):
-        return (
-            f"ModelLibraries(id={self.model_library_id}, library={self.model_library})"
-        )
-
-
-class ModelTypes(Base):
-    """Represents the ModelTypes table."""
-
-    __tablename__ = "ModelTypes"
-    model_type_id = Column(Integer, primary_key=True)
-    model_type = Column(String(100), nullable=False)
-    model_library_id = Column(
-        Integer, ForeignKey("ModelLibraries.model_library_id"), nullable=False
-    )
-
-    __table_args__ = (
-        UniqueConstraint(
-            "model_type", "model_library_id", name="uix_model_type_library"
-        ),
-    )
-
-    def __repr__(self):
-        return f"ModelTypes(id={self.model_type_id}, type={self.model_type})"
-
-
-class Models(Base):
-    """Represents the Models table."""
-
-    __tablename__ = "Models"
-    model_id = Column(Integer, primary_key=True)
-    strategy_id = Column(Integer, ForeignKey("Strategies.strategy_id"), nullable=False)
-    model_name = Column(String(100), nullable=False)
-    model_type_id = Column(
-        Integer, ForeignKey("ModelTypes.model_type_id"), nullable=False
-    )
-    model_dvc_hash = Column(String(100), nullable=False, unique=True)
-
-    def __repr__(self):
-        return f"Models(id={self.model_id}, name={self.model_name})"
-
-
-@dataclass
-class AllCoreInfo:
-    """A dataclass representing an observation in the SecuritiesInfo table in the database"""
-
-    # IDs
-    symbol_id: int = None
-    exchange_id: int = None
-    sec_type_id: int = None
-
-    # Values
-    ## SecuritiesInfo
-    symbol: str = None
-    to_int: int = None
-    ## SecurityExchanges
-    exchange_name: str = None
-    exchange_tz: str = None
-    ##SecurityTypes
-    security_type: str = None
-
-    @classmethod
-    def from_db_models(
-        cls,
-        security_info: SecuritiesInfo,
-        exchange: SecurityExchanges,
-        security_type: SecurityTypes,
-    ) -> "AllCoreInfo":
-        """
-        Creates an AllCoreInfo instance from database model instances.
-
-        Args:
-            security_info (SecuritiesInfo): SecuritiesInfo database model instance
-            exchange (SecurityExchanges): SecurityExchanges database model instance
-            security_type (SecurityType): SecurityType database model instance
-
-        Returns:
-            AllCoreInfo: A populated instance containing all core information
-        """
-        return cls(
-            # IDs
-            symbol_id=security_info.symbol_id,
-            exchange_id=security_info.exchange_id,
-            sec_type_id=security_info.security_type_id,
-            # SecuritiesInfo values
-            symbol=security_info.symbol,
-            to_int=security_info.to_int,
-            # Exchange values
-            exchange_name=exchange.exchange_name,
-            exchange_tz=exchange.local_timezone,
-            # SecurityType values
-            security_type=security_type.security_type,
-        )
-
-    @classmethod
-    def from_core_uks(
-        cls, symbol: str, sec_type: str, db_engine: Engine
-    ) -> "AllCoreInfo":
-        """
-        Takes in the unique constraints of the security you want info on and creates an all core info
-        object containing all of the info.
-
-        Args:
-            symbol (str): the symbol of the security you want to generate a contract for
-            sec_type (str): the security type
-            db_engine (Engine): an engine object you want to use to connect to your data base
-
-        Returns:
-            AllCoreInfo: A dataclass representing an observation in the SecuritiesInfo table in the database
-        """
-        sec_type_info: SecurityTypes = get_obs_uk(
-            db_engine=db_engine, cls=SecurityTypes, security_type=sec_type
-        )
-        sec_type_id = sec_type_info.security_type_id
-        core_info: SecuritiesInfo = get_obs_uk(
-            db_engine=db_engine,
-            cls=SecuritiesInfo,
-            security_type_id=sec_type_id,
-            symbol=symbol,
-        )
-        exchange_info: SecurityExchanges = get_obs_pk(
-            db_engine=db_engine, cls=SecurityExchanges, pk=core_info.exchange_id
-        )
-        all_core_info: AllCoreInfo = cls.from_db_models(
-            security_info=core_info, exchange=exchange_info, security_type=sec_type_info
-        )
-        return all_core_info
-
-    @classmethod
-    def from_sec_info(cls, sec_info: SecuritiesInfo, db_engine):
-        sec_type_info: SecurityTypes = get_obs_pk(
-            db_engine=db_engine,
-            cls=SecurityTypes,
-            pk=sec_info.security_type_id,
-        )
-        exchange_info: SecurityExchanges = get_obs_pk(
-            db_engine=db_engine, cls=SecurityExchanges, pk=sec_info.exchange_id
-        )
-        all_core_info: AllCoreInfo = cls.from_db_models(
-            security_info=sec_info, exchange=exchange_info, security_type=sec_type_info
-        )
-        return all_core_info
-
-
-class SecurityMetadata:
-    """
-    This class is responsible for getting all necessary metadata of a security given it's symbol and security type.
-    Using the unique keys `symbol` and `security_type`, it creates an instance of `SecuritiesInfo` and joins it
-    with the related metadata table
-    """
-
-    def __init__(self, db_engine: Engine, symbol: str, sec_type: str):
-        self.sec_type = sec_type
-        self.symbol = symbol
-        self.db_engine = db_engine
-
-    def get_info(self, metadata_table: DeclarativeBase):
-        sec_info = SecuritiesInfo().from_uks(
-            db_engine=self.db_engine, symbol=self.symbol, sec_type=self.sec_type
-        )
-        join_stmt = select(sec_info).join(metadata_table)
-        with Session(bind=self.db_engine) as session:
-            session.begin()
-            result = session.execute(join_stmt).fetchone()[0]
-            return result

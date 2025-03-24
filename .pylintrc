@@ -2,3 +2,4 @@
 max-line-length=115
 max-attributes=10
 disable=W0703
+disable=C0302

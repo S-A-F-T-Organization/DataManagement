@@ -1,5 +1,6 @@
 SQLAlchemy>=1.4
 PyYAML
+ib_insync
 
 [dev]
 twine>=4.0.2

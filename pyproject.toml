@@ -1,7 +1,42 @@
 [project]
-name = "datamanagement"
-version = "0.1.0"
-description = "Add your description here"
+name = "saft_data_mgmt"
+version = "0.2.8"
+description = "A package for managing financial data, specifically made for algorithmic traders."
 readme = "README.md"
-requires-python = ">=3.11"
-dependencies = []
+requires-python = ">=3.7"
+authors = [
+    { name = "Travis Swiger", email = "admin@stoneagefinancialtechnology.com" }
+]
+license = { file = "LICENSE" }
+urls = { "Homepage" = "https://github.com/S-A-F-T-Organization/DataManagement" }
+dependencies = [
+    "SQLAlchemy>=1.4",
+    "PyYAML",
+    "ib_insync"
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Office/Business :: Financial",
+    "Topic :: Database",
+    "Development Status :: 3 - Alpha",
+]
+
+[project.scripts]
+setup-saft-db = "saft_data_mgmt.setup_saft_db:main"
+
+[project.optional-dependencies]
+dev = [
+    "twine>=4.0.2",
+    "build"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["saft_data_mgmt*"]
+
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+

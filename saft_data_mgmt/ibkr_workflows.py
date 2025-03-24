@@ -9,15 +9,24 @@ from decimal import Decimal
 import pandas as pd
 from ib_insync import IB, BarDataList, Contract, ContractDetails, Forex
 from sqlalchemy import Engine, select, text
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Session
 
 from saft_data_mgmt.models import (
+    AccountInfo,
     AllCoreInfo,
     SecuritiesInfo,
     SecurityExchanges,
+    SecurityPricesOHLCVInt,
     SecurityTypes,
+    SessionInfo,
 )
-from saft_data_mgmt.Utils.helpers import prep_data, setup_dev_engine, setup_prod_engine
+from saft_data_mgmt.Utils.helpers import (
+    get_qualified_contract,
+    prep_data,
+    setup_dev_engine,
+    setup_prod_engine,
+)
 
 
 class AddCoreInfoWorkflow:
@@ -164,7 +173,9 @@ class AddCoreInfoWorkflow:
             Exception: Raises any exception that occurs during the insert and rolls back the transaction
         """
 
-        stmt = select(SecurityExchanges).where(SecurityExchanges.exchange_name == core_info.exchange_name)
+        stmt = select(SecurityExchanges).where(
+            SecurityExchanges.exchange_name == core_info.exchange_name
+        )
         with Session(self.db_engine) as session:
             session.begin()
             try:
@@ -307,7 +318,7 @@ class AddCoreInfoWorkflow:
             return 0
         min_tick = str(details.minTick)
         if "." in min_tick:
-            decimal_places = min_tick.split(".")[-1]
+            decimal_places = min_tick.split(".", maxsplit=1)[-1]
             to_int = len(decimal_places)
             return to_int
         return 1
@@ -379,3 +390,152 @@ class AddCoreInfoWorkflow:
         qualified_contract = self.get_qualified_contract()
         concrete_info = self.set_details(qualified_contract=qualified_contract)
         self.insert_symbol_info(core_info=concrete_info)
+
+
+class OHLCVAggregationWorkflow:
+    """
+    Workflow for aggregating OHLCV data
+    """
+    def __init__(self, sec_info: AllCoreInfo, dev_flag, ib: IB):
+        self.dev_flag = dev_flag
+        self.all_core_info = sec_info
+        self.ib = ib
+        if sec_info.security_type == "ETF":
+            sec_info.security_type = "STK"
+        if sec_info.security_type == "STK":
+            sec_info.exchange_name = "SMART"
+        self.contract = get_qualified_contract(
+            symbol=self.all_core_info.symbol,
+            security_type=self.all_core_info.security_type,
+            exchange=self.all_core_info.exchange_name,
+            ib=self.ib,
+        )
+
+    @property
+    def db_engine(self) -> Engine:
+        """Initializes the correct engine based on dev or prod flag"""
+        if self.dev_flag:
+            engine = setup_dev_engine()
+            return engine
+        engine = setup_prod_engine()
+        return engine
+
+    def retrieve_data(self, duration: str, bar_size: str) -> BarDataList:
+        """Retrieves historical bar data for the given symbol"""
+        bar_data: BarDataList = self.ib.reqHistoricalData(
+            contract=self.contract,
+            endDateTime="",
+            barSizeSetting=bar_size,
+            durationStr=duration,
+            whatToShow="TRADES",
+            formatDate=2,
+            useRTH=False,
+        )
+        return bar_data
+
+    def prep_data(self, bar_data: BarDataList) -> pd.DataFrame:
+        """
+        This method prepares the data retrieved from IBKR, it takes in the bars list from
+        ib_insync reqHistoricalData method and transforms it so that it is in the correct format
+        for our database
+
+        Args
+        - bar_data (BarDataList): This is a BarDataList object from ib_insync
+
+        Returns
+        - price_data (DataFrame): A DataFrame of the transformed data
+        """
+        data = {
+            "timestamp_utc_ms": [candle.date for candle in bar_data],
+            "open_price": [candle.open for candle in bar_data],
+            "high_price": [candle.high for candle in bar_data],
+            "low_price": [candle.low for candle in bar_data],
+            "close_price": [candle.close for candle in bar_data],
+            "volume": [candle.volume for candle in bar_data],
+        }
+        price_data = pd.DataFrame(data)
+        # Convert Timestamp to time since epoch (ms)
+        price_data["timestamp_utc_ms"] = pd.to_datetime(price_data["timestamp_utc_ms"])
+        price_data["timestamp_utc_ms"] = (
+            price_data["timestamp_utc_ms"].astype("int64") // 10**6
+        )
+        price_data["symbol_id"] = self.all_core_info.symbol_id
+
+        # Convert Price to an integer
+        price_cols = ["open_price", "high_price", "low_price", "close_price"]
+        to_int_val = self.all_core_info.to_int
+        price_data[price_cols] = (
+            price_data[price_cols]
+            .apply(lambda x: x * (10**to_int_val))
+            .astype(dtype=int)
+        )
+        price_data["volume"] = price_data["volume"].astype(dtype=int)
+        price_data = price_data.iloc[:-2]
+        return price_data
+
+    def upsert_data(self, price_data: pd.DataFrame):
+        """
+        Upserts price data into the SecurityPricesOHLCV table.
+        On conflict (i.e. duplicate combination of symbol_id and timestamp_utc_ms), ignore the record.
+        Handles large datasets by chunking the inserts to avoid SQLite parameter limits.
+
+        Args:
+            price_data (pd.DataFrame): DataFrame containing the price data to upsert.
+        """
+        # Convert DataFrame to records
+        records = price_data.to_dict(orient="records")
+
+        # Calculate chunk size based on number of columns (8) to stay under SQLite limit
+        # SQLite limit is typically 999, so we'll use 100 rows per chunk (800 parameters)
+        chunk_size = 100
+
+        with Session(bind=self.db_engine) as session:
+            # Process records in chunks
+            for i in range(0, len(records), chunk_size):
+                chunk = records[i : i + chunk_size]
+
+                # Create insert statement for chunk
+                stmt = sqlite_insert(SecurityPricesOHLCVInt).values(chunk)
+                stmt = stmt.on_conflict_do_nothing(
+                    index_elements=["symbol_id", "timestamp_utc_ms"]
+                )
+
+                # Execute the chunked statement
+                session.execute(stmt)
+
+            # Commit all chunks at once
+            session.commit()
+
+class PortfolioDataWorkflow:
+    """
+    Aggregates data for tables in the portfolio data tables
+    
+    Args:
+        ib (IB): _description_
+        config_info (dict): _description_
+        db_engine (Engine): _description_
+    """
+
+    def __init__(self, ib:IB, config_info:dict, dev_flag:bool):
+        self.ib = ib
+        self.config_info = config_info
+
+    @property
+    def db_engine(self) -> Engine:
+        """Initializes the correct engine based on dev or prod flag"""
+        if self.dev_flag:
+            engine = setup_dev_engine()
+            return engine
+        engine = setup_prod_engine()
+        return engine
+
+    def main(self):
+        account_info = AccountInfo().from_config(
+            db_engine=self.db_engine,
+            config_info=self.config_info
+        )
+        session = SessionInfo().create_new_session(db_engine=self.db_engine)
+
+        
+
+
