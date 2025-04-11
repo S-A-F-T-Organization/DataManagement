@@ -143,3 +143,32 @@ def get_obs_pk(
             )
             raise
     return cls
+
+def insert_new_instance(db_engine: Engine, cls: DeclarativeBase) -> str:
+    """
+    Inserts an observation of the given instance into the associated table
+
+    Args:
+        db_engine (Engine): the database engine to use to connect to the database
+        cls (Type[DeclarativeBase]): An instance of the class representing the observation you want to insert
+
+    Returns:
+        str: Status message indicating if record was added or not
+    """
+    exists_flag = check_obs_exists_uk(db_engine=db_engine, cls=cls)
+    if not exists_flag:
+        with Session(db_engine) as session:
+            try:
+                # Add the instance directly to the session
+                session.add(cls)
+                session.commit()
+                return "Added"
+            except Exception:
+                session.rollback()
+                logging.error(
+                    "Unknown exception inserting %s with unique constraints",
+                    cls.__tablename__,
+                    exc_info=True,
+                )
+                raise
+    return "Not added"

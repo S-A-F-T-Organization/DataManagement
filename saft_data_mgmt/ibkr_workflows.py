@@ -535,6 +535,7 @@ class PortfolioDataWorkflow:
             config_info=self.config_info
         )
         session = SessionInfo().create_new_session(db_engine=self.db_engine)
+        return None
 
         
 

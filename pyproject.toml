@@ -1,6 +1,6 @@
 [project]
 name = "saft_data_mgmt"
-version = "0.2.8"
+version = "0.2.9"
 description = "A package for managing financial data, specifically made for algorithmic traders."
 readme = "README.md"
 requires-python = ">=3.7"
@@ -10,9 +10,13 @@ authors = [
 license = { file = "LICENSE" }
 urls = { "Homepage" = "https://github.com/S-A-F-T-Organization/DataManagement" }
 dependencies = [
-    "SQLAlchemy>=1.4",
+    "sqlalchemy>=1.4",
     "PyYAML",
-    "ib_insync"
+    "ib_insync",
+    "python-dotenv>=0.21.1",
+    "twine>=4.0.2",
+    "build>=1.1.1",
+    "pandas>=1.1.5",
 ]
 classifiers = [
     "Programming Language :: Python :: 3",

@@ -7,16 +7,14 @@ from typing import Type
 import pandas as pd
 from dotenv import load_dotenv
 from ib_insync import IB, BarDataList, Contract, Forex
-from sqlalchemy import (
-    Engine,
+from sqlalchemy.engine import Engine, create_engine
+from sqlalchemy.inspection import inspect
+from sqlalchemy.orm import DeclarativeBase, Session
+from sqlalchemy.schema import (
     MetaData,
     UniqueConstraint,
-    create_engine,
-    inspect,
-    select,
-    text,
 )
-from sqlalchemy.orm import DeclarativeBase, Session
+from sqlalchemy.sql import select, text
 
 from saft_data_mgmt.models import AllCoreInfo, SecuritiesInfo
 
@@ -259,36 +257,6 @@ def truncate_dev_tables(dev_engine: Engine):
             trans.rollback()
             raise e
 
-def insert_new_instance(db_engine: Engine, cls: DeclarativeBase) -> str:
-    """
-    Inserts an observation of the given instance into the associated table
-
-    Args:
-        db_engine (Engine): the database engine to use to connect to the database
-        cls (Type[DeclarativeBase]): An instance of the class representing the observation you want to insert
-
-    Returns:
-        str: Status message indicating if record was added or not
-    """
-    exists_flag = check_obs_exists_uk(db_engine=db_engine, cls=cls)
-    if not exists_flag:
-        with Session(db_engine) as session:
-            try:
-                # Add the instance directly to the session
-                session.add(cls)
-                session.commit()
-                return "Added"
-            except Exception:
-                session.rollback()
-                logging.error(
-                    "Unknown exception inserting %s with unique constraints",
-                    cls.__tablename__,
-                    exc_info=True,
-                )
-                raise
-    return "Not added"
-
-
 def get_qualified_contract(
     symbol: str, security_type: str, exchange: str, ib: IB
 ) -> Contract:
@@ -300,64 +268,6 @@ def get_qualified_contract(
     if security_type == "CASH":
         if '.' in symbol:
             symbol=symbol.replace('.', '')
-        new_contract = Forex(pair=symbol)
-    contract_list = ib.reqContractDetails(contract=new_contract)
-    qualified_contract = ib.qualifyContracts(contract_list[0].contract)
-    if not qualified_contract:
-        raise ValueError(f"Could not qualify contract for {symbol}")
-    qual_contract = qualified_contract[0]
-    return qual_contract
-
-
-def contract_from_sql(
-    symbol: str, security_type: str, db_engine: Engine, ib: IB
-) -> Contract:
-    """
-    Generates a contract using a database connection
-
-    Args:
-        symbol (str): the symbol of the security you want to generate a contract for
-        security_type (str): the security type
-        db_engine (Engine): an engine object you want to use to connect to your data base
-        ib (IB): an IB object from ib_insync to interact with the IBKR API
-    """
-    new_contract = Contract()
-    symbol_info = AllCoreInfo().from_core_uks(
-        symbol=symbol, sec_type=security_type, db_engine=db_engine
-    )
-    if security_type == "ETF":
-        security_type = "STK"
-    new_contract.symbol = symbol_info.symbol
-    new_contract.secType = symbol_info.security_type
-    new_contract.exchange = symbol_info.exchange_name
-    if security_type == "CASH":
-        new_contract = Forex(pair=symbol)
-    contract_list = ib.reqContractDetails(contract=new_contract)
-    qualified_contract = ib.qualifyContracts(contract_list[0].contract)
-    if not qualified_contract:
-        raise ValueError(f"Could not qualify contract for {symbol}")
-    qual_contract = qualified_contract[0]
-    return qual_contract
-
-def contract_from_all_core_info(
-    symbol_info:AllCoreInfo, ib: IB
-) -> Contract:
-    """
-    Generates a contract using an AllCoreInfo instance
-
-    Args:
-        symbol_info (AllCoreInfo): instance containing necessary security info
-        ib (IB): an IB object from ib_insync to interact with the IBKR API
-    """
-    new_contract = Contract()
-    symbol = symbol_info.symbol
-    security_type=symbol_info.security_type
-    if security_type == "ETF":
-        security_type = "STK"
-    new_contract.symbol = symbol_info.symbol
-    new_contract.secType = symbol_info.security_type
-    new_contract.exchange = symbol_info.exchange_name
-    if security_type == "CASH":
         new_contract = Forex(pair=symbol)
     contract_list = ib.reqContractDetails(contract=new_contract)
     qualified_contract = ib.qualifyContracts(contract_list[0].contract)
@@ -393,6 +303,16 @@ def prep_data(candles: BarDataList, ticker: str) -> pd.DataFrame:
     price_data["Time"] = price_data["Timestamp"].dt.time
     return price_data
 
+def create_securities_list(db_engine) -> list[AllCoreInfo]:
+    """Gets a list of the securities being tracked"""
+    stmt = select(SecuritiesInfo)
+    with Session(bind=db_engine) as session:
+        securities = session.execute(stmt).scalars().all()
+    core_info_list = []
+    for i in securities:
+        core_info = AllCoreInfo().from_sec_info(sec_info=i, db_engine=db_engine)
+        core_info_list.append(core_info)
+    return core_info_list
 
 def clean_ohlcv_data_int(candles: BarDataList, core_info: AllCoreInfo):
     """Cleans and inserts OHLCV data into the database"""
@@ -469,13 +389,59 @@ def retrieve_ohlcv_data(
     df = pd.read_sql_query(query, db_engine)
     return df
 
-def create_securities_list(db_engine) -> list[AllCoreInfo]:
-    """Gets a list of the securities being tracked"""
-    stmt = select(SecuritiesInfo)
-    with Session(bind=db_engine) as session:
-        securities = session.execute(stmt).scalars().all()
-    core_info_list = []
-    for i in securities:
-        core_info = AllCoreInfo().from_sec_info(sec_info=i, db_engine=db_engine)
-        core_info_list.append(core_info)
-    return core_info_list
+def contract_from_all_core_info(
+    symbol_info:AllCoreInfo, ib: IB
+) -> Contract:
+    """
+    Generates a contract using an AllCoreInfo instance
+
+    Args:
+        symbol_info (AllCoreInfo): instance containing necessary security info
+        ib (IB): an IB object from ib_insync to interact with the IBKR API
+    """
+    new_contract = Contract()
+    symbol = symbol_info.symbol
+    security_type=symbol_info.security_type
+    if security_type == "ETF":
+        security_type = "STK"
+    new_contract.symbol = symbol_info.symbol
+    new_contract.secType = symbol_info.security_type
+    new_contract.exchange = symbol_info.exchange_name
+    if security_type == "CASH":
+        new_contract = Forex(pair=symbol)
+    contract_list = ib.reqContractDetails(contract=new_contract)
+    qualified_contract = ib.qualifyContracts(contract_list[0].contract)
+    if not qualified_contract:
+        raise ValueError(f"Could not qualify contract for {symbol}")
+    qual_contract = qualified_contract[0]
+    return qual_contract
+
+def contract_from_sql(
+    symbol: str, security_type: str, db_engine: Engine, ib: IB
+) -> Contract:
+    """
+    Generates a contract using a database connection
+
+    Args:
+        symbol (str): the symbol of the security you want to generate a contract for
+        security_type (str): the security type
+        db_engine (Engine): an engine object you want to use to connect to your data base
+        ib (IB): an IB object from ib_insync to interact with the IBKR API
+    """
+    new_contract = Contract()
+    symbol_info = AllCoreInfo().from_core_uks(
+        symbol=symbol, sec_type=security_type, db_engine=db_engine
+    )
+    if security_type == "ETF":
+        security_type = "STK"
+    new_contract.symbol = symbol_info.symbol
+    new_contract.secType = symbol_info.security_type
+    new_contract.exchange = symbol_info.exchange_name
+    if security_type == "CASH":
+        new_contract = Forex(pair=symbol)
+    contract_list = ib.reqContractDetails(contract=new_contract)
+    qualified_contract = ib.qualifyContracts(contract_list[0].contract)
+    if not qualified_contract:
+        raise ValueError(f"Could not qualify contract for {symbol}")
+    qual_contract = qualified_contract[0]
+    return qual_contract

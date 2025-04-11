@@ -1,18 +1,19 @@
 """Tests the helpers module."""
 
-import os
 import logging
-import unittest
-import tempfile
+import os
 import shutil
+import tempfile
 import time
+import unittest
 
-from sqlalchemy import Engine, inspect
+from sqlalchemy.engine import Engine
+from sqlalchemy.inspection import inspect
 
 from saft_data_mgmt.Utils.helpers import (
-    setup_log_to_console,
-    initalize_db_engine,
     create_table,
+    initalize_db_engine,
+    setup_log_to_console,
 )
 
 

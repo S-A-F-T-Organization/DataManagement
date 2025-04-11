@@ -1,9 +1,7 @@
 Metadata-Version: 2.4
 Name: saft_data_mgmt
-Version: 0.2.8
+Version: 0.2.9
 Summary: A package for managing financial data, specifically made for algorithmic traders.
-Home-page: https://github.com/S-A-F-T-Organization/DataManagement
-Author: Travis Swiger
 Author-email: Travis Swiger <admin@stoneagefinancialtechnology.com>
 License:                                  Apache License
                                    Version 2.0, January 2004
@@ -217,16 +215,17 @@ Classifier: Development Status :: 3 - Alpha
 Requires-Python: >=3.7
 Description-Content-Type: text/markdown
 License-File: LICENSE
-Requires-Dist: SQLAlchemy>=1.4
+Requires-Dist: sqlalchemy>=1.4
 Requires-Dist: PyYAML
 Requires-Dist: ib_insync
+Requires-Dist: python-dotenv>=0.21.1
+Requires-Dist: twine>=4.0.2
+Requires-Dist: build>=1.1.1
+Requires-Dist: pandas>=1.1.5
 Provides-Extra: dev
 Requires-Dist: twine>=4.0.2; extra == "dev"
 Requires-Dist: build; extra == "dev"
-Dynamic: author
-Dynamic: home-page
 Dynamic: license-file
-Dynamic: requires-python
 
 # DataManagement
 

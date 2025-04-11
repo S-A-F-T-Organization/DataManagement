@@ -7,7 +7,7 @@ import time
 from dataclasses import dataclass
 from typing import Callable
 
-import pandas as pd
+import yaml
 from ib_insync import ContractDetails
 from sqlalchemy import (
     Column,
@@ -23,7 +23,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import DeclarativeBase, Session, declarative_base, relationship
 
-from saft_data_mgmt.Utils.helpers import get_obs_pk, get_obs_uk, insert_new_instance
+from saft_data_mgmt.Utils.obs_helpers import get_obs_pk, get_obs_uk, insert_new_instance
 
 Base = declarative_base()
 
@@ -35,7 +35,7 @@ Base = declarative_base()
 class SecurityTypes(Base):
     """Represents the SecurityTypes table."""
 
-    __tablename__ = "SecurityTypes"
+    __tablename__ = "securitytypes"
 
     security_type_id = Column(SmallInteger, primary_key=True)
     security_type = Column(String(50), nullable=False, unique=True)
@@ -49,7 +49,7 @@ class SecurityTypes(Base):
 class SecurityExchanges(Base):
     """Represents the SecurityExchanges table."""
 
-    __tablename__ = "SecurityExchanges"
+    __tablename__ = "securityexchanges"
 
     exchange_id = Column(SmallInteger, primary_key=True)
     exchange_name = Column(String(50), nullable=False, unique=True)
@@ -64,7 +64,7 @@ class SecurityExchanges(Base):
 class SecuritiesInfo(Base):
     """Represents the SecuritiesInfo table."""
 
-    __tablename__ = "SecuritiesInfo"
+    __tablename__ = "securitiesinfo"
     __table_args__ = (
         UniqueConstraint(
             "symbol",
@@ -264,7 +264,7 @@ class SecurityPricesMBPConsolidatedInt(Base):
 class SecurityPricesMBPConsolidatedFloat(Base):
     """Represents the SecurityPricesMBPConsolidated table with float prices."""
 
-    __tablename__ = "SecurityPricesMBPConsolidated"
+    __tablename__ = "SecurityPricesMBPConsolidatedFloat"
     quote_id = Column(Integer, primary_key=True)
     symbol_id = Column(Integer, ForeignKey("SecuritiesInfo.symbol_id"), nullable=False)
     timestamp_utc_ms = Column(Integer, nullable=False)
@@ -365,7 +365,7 @@ class SecurityPricesMBPFullInt(Base):
 class SecurityPricesMBPFullFloat(Base):
     """Represents the SecurityPricesMBPFull table with float prices."""
 
-    __tablename__ = "SecurityPricesMBPFull"
+    __tablename__ = "SecurityPricesMBPFullFloat"
     quote_id = Column(Integer, primary_key=True)
     symbol_id = Column(Integer, ForeignKey("SecuritiesInfo.symbol_id"), nullable=False)
     timestamp_utc_ms = Column(Integer, nullable=False)
@@ -430,7 +430,7 @@ class OptionsOHLCVInt(Base):
 class OptionsOHLCVFloat(Base):
     """Represents the OptionsOHLCV table with float prices."""
 
-    __tablename__ = "OptionsOHLCV"
+    __tablename__ = "OptionsOHLCVFloat"
     option_ohlcv_id = Column(Integer, primary_key=True, nullable=False)
     underlying_symbol_id = Column(
         Integer, ForeignKey("SecuritiesInfo.symbol_id"), nullable=False
@@ -927,7 +927,7 @@ class Strategies(Base):
         return f"Strategies(id={self.strategy_id}, name={self.strategy_name})"
     
     @classmethod
-    def from_config(cls, db_engine: Engine, config_dict: dict) -> "Strategies":
+    def from_config(cls, db_engine: Engine, config_path: str) -> "Strategies":
         """
         Generates a Strategies instance using the info in the config file. If a strategy
         does not exist in the database with the specified name and version, then it creates
@@ -939,12 +939,14 @@ class Strategies(Base):
         Returns:
             AccountInfo: _description_
         """
-        config_info:dict = config_dict.get("strategy_info")
+        with open(config_path, 'r', encoding='utf-8') as file:
+            config_info = yaml.safe_load(file)
+        strat_info = config_info["strategy_description"]
         strat = get_obs_uk(
             db_engine=db_engine,
             cls=cls,
-            strategy_name=config_info.get("strategy_name"),
-            strategy_version=config_info.get("strategy_version")
+            strategy_name=strat_info["strategy_name"],
+            strategy_version=strat_info["strategy_version"]
             )
         
         if not strat:
@@ -955,11 +957,13 @@ class Strategies(Base):
            
                 strat = cls(
                     strategy_id = new_strat_id,
-                    strategy_name = config_info.get("strategy_name"),
-                    strategy_version = config_info.get("strategy_version"),
-                    strategy_description = config_info.get("strategy_description")
+                    strategy_name=strat_info["strategy_name"],
+                    strategy_version=strat_info["strategy_version"],
+                    strategy_description = strat_info["strategy_description"]
                     )
                 session.add(strat)
+                return strat
+        return strat
 
 
 class Inferences(Base):
@@ -986,10 +990,6 @@ class Inferences(Base):
 
     def __repr__(self):
         return f"Inferences(id={self.inference_id})"
-    
-    @classmethod
-    def new_inference(cls, symbol_info:AllCoreInfo, price_df:pd.DataFrame, inference_df) -> "Inferences":
-        return cls
         
 class InferenceSteps(Base):
     """Represents the InferenceSteps table."""

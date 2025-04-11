@@ -2,7 +2,6 @@ LICENSE
 MANIFEST.in
 README.md
 pyproject.toml
-setup.py
 saft_data_mgmt/__init__.py
 saft_data_mgmt/__main__.py
 saft_data_mgmt/ibkr_utils.py
